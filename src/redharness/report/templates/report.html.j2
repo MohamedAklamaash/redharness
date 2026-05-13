@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>redharness report — {{ result.run_name }}</title>
+<style>
+  body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 2rem; color: #1a1a1a; }
+  h1 { margin-bottom: 0.2rem; }
+  .meta { color: #666; margin-bottom: 1.5rem; }
+  table { border-collapse: collapse; width: 100%; margin-bottom: 2rem; }
+  th, td { border: 1px solid #ddd; padding: 0.5rem 0.75rem; text-align: left; }
+  th { background: #f3f4f6; }
+  tr:nth-child(even) { background: #fafafa; }
+  code { background: #f3f4f6; padding: 0.1rem 0.3rem; border-radius: 3px; }
+  .note { font-size: 0.85rem; color: #777; }
+</style>
+</head>
+<body>
+  <h1>redharness report</h1>
+  <div class="meta">
+    run <code>{{ result.run_id }}</code> &middot; seed {{ result.seed }} &middot;
+    {{ result.cells | length }} cells
+  </div>
+
+  {% for cell in result.cells %}
+  <h2>{{ cell.attack }} &times; {{ cell.target }}</h2>
+  <div class="note">
+    dataset <code>{{ cell.dataset }}</code> ({{ cell.dataset_version }}) &middot;
+    judge <code>{{ cell.judge }}</code>
+  </div>
+  <table>
+    <tr><th>Metric</th><th>Value</th></tr>
+    {% for name, m in cell.metrics.items() %}
+    <tr><td>{{ name }}</td><td>{{ "%.4f"|format(m.value) }}</td></tr>
+    {% endfor %}
+  </table>
+  {% endfor %}
+
+  <p class="note">
+    Every number is reported as the (dataset_version, judge, metric) triple so it is unambiguous.
+  </p>
+</body>
+</html>

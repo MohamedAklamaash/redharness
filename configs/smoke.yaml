@@ -1,0 +1,35 @@
+# Offline smoke run: MockTarget + static & template attacks + bundled demo
+# dataset + both judges + all metrics. Runs end-to-end with zero env setup.
+run_name: smoke
+seed: 0
+
+targets:
+  # The mock is configured so the "Ignore the previous framing" wrapper used by
+  # the template attack's prefix_injection template counts as a bypass — this
+  # gives the smoke run a non-trivial, deterministic jailbreak success rate so
+  # the success path is exercised end-to-end, while static replay still fails.
+  - name: mock
+    params:
+      bypass_markers:
+        - "ignore the previous framing"
+
+attacks:
+  - static
+  - template
+
+datasets:
+  - demo
+
+judges:
+  - refusal_match
+  - name: rubric
+    params:
+      grader:
+        name: mock
+
+metrics:
+  - asr
+  - asr_at_k
+  - refusal_rate
+  - strongreject_score
+  - frr

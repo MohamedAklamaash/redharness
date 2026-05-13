@@ -1,0 +1,238 @@
+% Literature grounding for redharness (plan §1).
+% Standardization frameworks & leaderboards
+
+@inproceedings{mazeika2024harmbench,
+  title     = {HarmBench: A Standardized Evaluation Framework for Automated Red Teaming and Robust Refusal},
+  author    = {Mazeika, Mantas and Phan, Long and Yin, Xuwang and Zou, Andy and Wang, Zifan and Mu, Norman and Sakhaee, Elham and Li, Nathaniel and Basart, Steven and Li, Bo and Forsyth, David and Hendrycks, Dan},
+  booktitle = {International Conference on Machine Learning (ICML)},
+  year      = {2024},
+  eprint    = {2402.04249},
+  archivePrefix = {arXiv},
+  url       = {https://arxiv.org/abs/2402.04249}
+}
+
+@inproceedings{chao2024jailbreakbench,
+  title     = {JailbreakBench: An Open Robustness Benchmark for Jailbreaking Large Language Models},
+  author    = {Chao, Patrick and Debenedetti, Edoardo and Robey, Alexander and Andriushchenko, Maksym and Croce, Francesco and Sehwag, Vikash and Dobriban, Edgar and Flammarion, Nicolas and Pappas, George J. and Tramer, Florian and Hassani, Hamed and Wong, Eric},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2024},
+  eprint    = {2404.01318},
+  archivePrefix = {arXiv},
+  url       = {https://arxiv.org/abs/2404.01318}
+}
+
+@inproceedings{souly2024strongreject,
+  title     = {A StrongREJECT for Empty Jailbreaks},
+  author    = {Souly, Alexandra and Lu, Qingyuan and Bowen, Dillon and Trinh, Tu and Hsieh, Elvis and Pandey, Sana and Abbeel, Pieter and Svegliato, Justin and Emmons, Scott and Watkins, Olivia and Toyer, Sam},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2024},
+  eprint    = {2402.10260},
+  archivePrefix = {arXiv},
+  url       = {https://arxiv.org/abs/2402.10260}
+}
+
+@inproceedings{wang2023decodingtrust,
+  title     = {DecodingTrust: A Comprehensive Assessment of Trustworthiness in GPT Models},
+  author    = {Wang, Boxin and others},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2023},
+  eprint    = {2306.11698},
+  archivePrefix = {arXiv},
+  url       = {https://arxiv.org/abs/2306.11698}
+}
+
+@article{sun2024trustllm,
+  title   = {TrustLLM: Trustworthiness in Large Language Models},
+  author  = {Sun, Lichao and others},
+  year    = {2024},
+  eprint  = {2401.05561},
+  archivePrefix = {arXiv},
+  url     = {https://arxiv.org/abs/2401.05561}
+}
+
+% Jailbreak attacks
+
+@article{zou2023gcg,
+  title   = {Universal and Transferable Adversarial Attacks on Aligned Language Models},
+  author  = {Zou, Andy and Wang, Zifan and Carlini, Nicholas and Nasr, Milad and Kolter, J. Zico and Fredrikson, Matt},
+  year    = {2023},
+  eprint  = {2307.15043},
+  archivePrefix = {arXiv},
+  url     = {https://arxiv.org/abs/2307.15043}
+}
+
+@article{chao2023pair,
+  title   = {Jailbreaking Black Box Large Language Models in Twenty Queries},
+  author  = {Chao, Patrick and Robey, Alexander and Dobriban, Edgar and Hassani, Hamed and Pappas, George J. and Wong, Eric},
+  year    = {2023},
+  eprint  = {2310.08419},
+  archivePrefix = {arXiv},
+  url     = {https://arxiv.org/abs/2310.08419}
+}
+
+@article{mehrotra2023tap,
+  title   = {Tree of Attacks: Jailbreaking Black-Box LLMs Automatically},
+  author  = {Mehrotra, Anay and Zampetakis, Manolis and Kassianik, Paul and Nelson, Blaine and Anderson, Hyrum and Singer, Yaron and Karbasi, Amin},
+  year    = {2023},
+  eprint  = {2312.02119},
+  archivePrefix = {arXiv},
+  url     = {https://arxiv.org/abs/2312.02119}
+}
+
+@article{liu2023autodan,
+  title   = {AutoDAN: Generating Stealthy Jailbreak Prompts on Aligned Large Language Models},
+  author  = {Liu, Xiaogeng and Xu, Nan and Chen, Muhao and Xiao, Chaowei},
+  year    = {2023},
+  eprint  = {2310.04451},
+  archivePrefix = {arXiv},
+  url     = {https://arxiv.org/abs/2310.04451}
+}
+
+@article{wei2023jailbroken,
+  title   = {Jailbroken: How Does LLM Safety Training Fail?},
+  author  = {Wei, Alexander and Haghtalab, Nika and Steinhardt, Jacob},
+  year    = {2023},
+  eprint  = {2307.02483},
+  archivePrefix = {arXiv},
+  url     = {https://arxiv.org/abs/2307.02483}
+}
+
+@article{shen2023dan,
+  title   = {"Do Anything Now": Characterizing and Evaluating In-The-Wild Jailbreak Prompts on Large Language Models},
+  author  = {Shen, Xinyue and Chen, Zeyuan and Backes, Michael and Shen, Yun and Zhang, Yang},
+  year    = {2023},
+  eprint  = {2308.03825},
+  archivePrefix = {arXiv},
+  url     = {https://arxiv.org/abs/2308.03825}
+}
+
+% Prompt injection (direct + indirect / agentic)
+
+@article{greshake2023injection,
+  title   = {Not What You've Signed Up For: Compromising Real-World LLM-Integrated Applications with Indirect Prompt Injection},
+  author  = {Greshake, Kai and Abdelnabi, Sahar and Mishra, Shailesh and Endres, Christoph and Holz, Thorsten and Fritz, Mario},
+  year    = {2023},
+  eprint  = {2302.12173},
+  archivePrefix = {arXiv},
+  url     = {https://arxiv.org/abs/2302.12173}
+}
+
+@inproceedings{debenedetti2024agentdojo,
+  title     = {AgentDojo: A Dynamic Environment to Evaluate Attacks and Defenses for LLM Agents},
+  author    = {Debenedetti, Edoardo and Zhang, Jie and Balunovic, Mislav and Beurer-Kellner, Luca and Fischer, Marc and Tramer, Florian},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2024},
+  eprint    = {2406.13352},
+  archivePrefix = {arXiv},
+  url       = {https://arxiv.org/abs/2406.13352}
+}
+
+@article{zhan2024injecagent,
+  title   = {InjecAgent: Benchmarking Indirect Prompt Injections in Tool-Integrated Large Language Model Agents},
+  author  = {Zhan, Qiusi and Liang, Zhixiang and Ying, Zifan and Kang, Daniel},
+  year    = {2024},
+  eprint  = {2403.02691},
+  archivePrefix = {arXiv},
+  url     = {https://arxiv.org/abs/2403.02691}
+}
+
+@article{andriushchenko2024agentharm,
+  title   = {AgentHarm: A Benchmark for Measuring Harmfulness of LLM Agents},
+  author  = {Andriushchenko, Maksym and Souly, Alexandra and others},
+  year    = {2024},
+  eprint  = {2410.09024},
+  archivePrefix = {arXiv},
+  url     = {https://arxiv.org/abs/2410.09024}
+}
+
+@misc{owasp_llm_top10,
+  title        = {OWASP Top 10 for Large Language Model Applications},
+  author       = {{OWASP Foundation}},
+  year         = {2025},
+  howpublished = {\url{https://genai.owasp.org}}
+}
+
+% Data leakage / memorization / privacy
+
+@inproceedings{carlini2021extracting,
+  title     = {Extracting Training Data from Large Language Models},
+  author    = {Carlini, Nicholas and Tramer, Florian and Wallace, Eric and Jagielski, Matthew and Herbert-Voss, Ariel and Lee, Katherine and Roberts, Adam and Brown, Tom and Song, Dawn and Erlingsson, Ulfar and Oprea, Alina and Raffel, Colin},
+  booktitle = {USENIX Security Symposium},
+  year      = {2021},
+  eprint    = {2012.07805},
+  archivePrefix = {arXiv},
+  url       = {https://arxiv.org/abs/2012.07805}
+}
+
+@article{nasr2023scalable,
+  title   = {Scalable Extraction of Training Data from (Production) Language Models},
+  author  = {Nasr, Milad and Carlini, Nicholas and Hayase, Jonathan and Jagielski, Matthew and Cooper, A. Feder and Ippolito, Daphne and Choquette-Choo, Christopher A. and Wallace, Eric and Tramer, Florian and Lee, Katherine},
+  year    = {2023},
+  eprint  = {2311.17035},
+  archivePrefix = {arXiv},
+  url     = {https://arxiv.org/abs/2311.17035}
+}
+
+@inproceedings{carlini2019secretsharer,
+  title     = {The Secret Sharer: Evaluating and Testing Unintended Memorization in Neural Networks},
+  author    = {Carlini, Nicholas and Liu, Chang and Erlingsson, Ulfar and Kos, Jernej and Song, Dawn},
+  booktitle = {USENIX Security Symposium},
+  year      = {2019},
+  eprint    = {1802.08232},
+  archivePrefix = {arXiv},
+  url       = {https://arxiv.org/abs/1802.08232}
+}
+
+% Over-refusal
+
+@article{rottger2024xstest,
+  title   = {XSTest: A Test Suite for Identifying Exaggerated Safety Behaviours in Large Language Models},
+  author  = {Rottger, Paul and Kirk, Hannah Rose and Vidgen, Bertie and Attanasio, Giuseppe and Bianchi, Federico and Hovy, Dirk},
+  year    = {2024},
+  eprint  = {2308.01263},
+  archivePrefix = {arXiv},
+  url     = {https://arxiv.org/abs/2308.01263}
+}
+
+@article{cui2024orbench,
+  title   = {OR-Bench: An Over-Refusal Benchmark for Large Language Models},
+  author  = {Cui, Justin and Chiang, Wei-Lin and Stoica, Ion and Hsieh, Cho-Jui},
+  year    = {2024},
+  eprint  = {2405.20947},
+  archivePrefix = {arXiv},
+  url     = {https://arxiv.org/abs/2405.20947}
+}
+
+% Guardrail / judge models
+
+@article{inan2023llamaguard,
+  title   = {Llama Guard: LLM-based Input-Output Safeguard for Human-AI Conversations},
+  author  = {Inan, Hakan and Upasani, Kartikeya and Chi, Jianfeng and Rungta, Rashi and Iyer, Krithika and Mao, Yuning and Tontchev, Michael and Hu, Qing and Fuller, Brian and Testuggine, Davide and Khabsa, Madian},
+  year    = {2023},
+  eprint  = {2312.06674},
+  archivePrefix = {arXiv},
+  url     = {https://arxiv.org/abs/2312.06674}
+}
+
+% Existing tooling
+
+@misc{garak,
+  title        = {garak: A Framework for Security Probing Large Language Models},
+  author       = {{NVIDIA}},
+  year         = {2024},
+  howpublished = {\url{https://github.com/NVIDIA/garak}}
+}
+
+@misc{pyrit,
+  title        = {PyRIT: Python Risk Identification Tool for Generative AI},
+  author       = {{Microsoft}},
+  year         = {2024},
+  howpublished = {\url{https://github.com/Azure/PyRIT}}
+}
+
+@misc{inspect,
+  title        = {Inspect: An Open-Source Framework for Large Language Model Evaluations},
+  author       = {{UK AI Safety Institute}},
+  year         = {2024},
+  howpublished = {\url{https://github.com/UKGovernmentBEIS/inspect_ai}}
+}

@@ -1,0 +1,75 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "redharness"
+version = "0.1.0"
+description = "An open-source, research-grounded LLM red-teaming and safety benchmark harness."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "redharness contributors" }]
+keywords = ["llm", "red-teaming", "safety", "jailbreak", "benchmark", "evaluation"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+]
+dependencies = [
+    "pydantic>=2",
+    "pyyaml>=6",
+    "jinja2>=3",
+    "typer>=0.12",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-cov>=5",
+    "ruff>=0.6",
+]
+openai = [
+    "httpx>=0.27",
+]
+
+[project.scripts]
+redharness = "redharness.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/redharness/redharness"
+Repository = "https://github.com/redharness/redharness"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/redharness"]
+# Non-.py package data (bundled dataset + HTML report template) ships in the wheel.
+artifacts = [
+    "src/redharness/datasets/data/*.json",
+    "src/redharness/report/templates/*.j2",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra"
+
+[tool.coverage.run]
+source = ["redharness"]
+omit = ["*/targets/openai_compat.py", "*/attacks/external/*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "C4", "SIM", "RUF"]
+ignore = ["B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011"]
+# The Markdown report intentionally uses the × multiplication sign for readability.
+"src/redharness/report/render.py" = ["RUF001"]
