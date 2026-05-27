@@ -1,8 +1,8 @@
 """Stable interfaces and data models — the extensibility contract.
 
-Five pluggable axes (Target, Attack, Dataset, Judge, Metric) plus a documented
-Scenario interface for the injection surface, all discoverable through a typed
-``Registry``.
+Five pluggable axes (Target, Attack, Dataset, Judge, Metric) for the jailbreak
+surface, plus the Scenario / injection axes for the agentic prompt-injection
+surface, all discoverable through a typed ``Registry``.
 """
 
 from redharness.core.attack import Attack

@@ -10,15 +10,25 @@ from typer.testing import CliRunner
 from redharness.cli import app, main
 
 runner = CliRunner()
-SMOKE_CONFIG = Path(__file__).resolve().parents[1] / "configs" / "smoke.yaml"
+_CONFIGS = Path(__file__).resolve().parents[1] / "configs"
+SMOKE_CONFIG = _CONFIGS / "smoke.yaml"
+INJECTION_CONFIG = _CONFIGS / "injection_smoke.yaml"
 
 
 def test_list_shows_every_axis():
     result = runner.invoke(app, ["list"])
     assert result.exit_code == 0
-    for axis in ("targets", "attacks", "datasets", "judges", "metrics"):
+    for axis in ("targets", "attacks", "datasets", "judges", "metrics", "injections", "scenarios"):
         assert axis in result.stdout
     assert "mock" in result.stdout
+    assert "indirect_injection" in result.stdout
+
+
+def test_validate_injection_config_reports_mode():
+    result = runner.invoke(app, ["validate", str(INJECTION_CONFIG)])
+    assert result.exit_code == 0
+    assert "injection mode" in result.stdout
+    assert "injection(s)" in result.stdout
 
 
 def test_list_shows_remote_dataset():

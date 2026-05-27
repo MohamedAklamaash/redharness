@@ -11,4 +11,5 @@ import redharness.attacks
 import redharness.datasets
 import redharness.judges
 import redharness.metrics
+import redharness.scenarios
 import redharness.targets  # noqa: F401

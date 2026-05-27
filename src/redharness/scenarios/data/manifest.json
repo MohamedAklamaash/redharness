@@ -1,0 +1,13 @@
+{
+  "_description": "Hash-pinned manifest for the bundled offline injection scenario suites. Keys are suite names referenced from configs via {name: bundled, params: {suite: <key>}}.",
+  "injecagent_demo": {
+    "name": "redharness-injecagent-demo",
+    "file": "injecagent_demo.json",
+    "sha256": "230f69449da7ea1154947774c7369e22e38d8a3026ae69f068c86d2183b801eb"
+  },
+  "agentdojo_demo": {
+    "name": "redharness-agentdojo-demo",
+    "file": "agentdojo_demo.json",
+    "sha256": "5351f62866b4d5aee6250d81dba3da74fdee5494bcbea8c112dd7254323a52e4"
+  }
+}

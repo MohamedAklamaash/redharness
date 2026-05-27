@@ -1,0 +1,41 @@
+# Offline injection smoke run: deterministic tool-calling agents driven through
+# the bundled benign scenario suites under direct + indirect injection, plus the
+# no-injection baseline. Runs end-to-end with zero env setup, no API keys.
+#
+# Two agents: a "robust" one that ignores injected instructions (ISR 0, utility 1)
+# and a "vulnerable" one that obeys the injected marker (ISR 1). The no_injection
+# attack supplies the utility_baseline control.
+run_name: injection_smoke
+seed: 0
+max_steps: 6
+
+targets:
+  - name: mock_agent
+    params:
+      name: agent_robust
+      susceptibility: robust
+  - name: mock_agent
+    params:
+      name: agent_vulnerable
+      susceptibility: vulnerable
+
+injections:
+  - no_injection
+  - direct_injection
+  - indirect_injection
+
+scenarios:
+  - name: bundled
+    params:
+      suite: injecagent_demo
+  - name: bundled
+    params:
+      suite: agentdojo_demo
+
+judges:
+  - injection_detector
+
+metrics:
+  - injection_success_rate
+  - utility_under_attack
+  - utility_baseline

@@ -18,10 +18,16 @@ ScoredAttempts = list[tuple[Behavior, Attempt, Verdict]]
 
 
 class MetricResult(BaseModel):
-    """The output of a metric: a headline value plus an auditable breakdown."""
+    """The output of a metric: a headline value plus an auditable breakdown.
+
+    ``value`` is ``None`` when the metric is *not applicable* to the cell it was
+    computed over (its relevant subset is empty) — e.g. utility_under_attack on a
+    no-injection cell. ``None`` reads as "N/A", distinct from ``0.0`` which means
+    "applicable, and the agent scored zero".
+    """
 
     name: str
-    value: float
+    value: float | None
     breakdown: dict[str, Any] = Field(default_factory=dict)
 
 

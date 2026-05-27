@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel, Field, ValidationError, field_validator
+from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
 from redharness.errors import ConfigError
 
@@ -32,17 +32,33 @@ class PluginSpec(BaseModel):
 
 
 class RunConfig(BaseModel):
-    """A complete, validated run specification."""
+    """A complete, validated run specification.
+
+    A run is in one of two modes, determined by which axes are populated:
+
+      * **jailbreak** — ``attacks`` x ``datasets`` (the Phase 1 matrix), or
+      * **injection** — ``injections`` x ``scenarios`` (the Phase 2 agentic surface).
+
+    ``targets``, ``judges`` and ``metrics`` are shared by both. Exactly one mode
+    must be configured, so a config is never ambiguous about what it runs.
+    """
 
     run_name: str = "redharness-run"
     seed: int = 0
+    max_steps: int = Field(default=6, ge=1, le=64)
     targets: list[PluginSpec] = Field(min_length=1)
-    attacks: list[PluginSpec] = Field(min_length=1)
-    datasets: list[PluginSpec] = Field(min_length=1)
     judges: list[PluginSpec] = Field(min_length=1)
     metrics: list[str] = Field(min_length=1)
+    attacks: list[PluginSpec] = Field(default_factory=list)
+    datasets: list[PluginSpec] = Field(default_factory=list)
+    injections: list[PluginSpec] = Field(default_factory=list)
+    scenarios: list[PluginSpec] = Field(default_factory=list)
 
     model_config = {"extra": "forbid"}
+
+    @property
+    def mode(self) -> str:
+        return "injection" if self.scenarios else "jailbreak"
 
     @field_validator("run_name")
     @classmethod
@@ -53,6 +69,27 @@ class RunConfig(BaseModel):
                 "(no path separators, no '..', 1-128 chars)"
             )
         return value
+
+    @model_validator(mode="after")
+    def _validate_mode(self) -> RunConfig:
+        jailbreak = bool(self.attacks or self.datasets)
+        injection = bool(self.injections or self.scenarios)
+        if jailbreak and injection:
+            raise ValueError(
+                "config mixes modes: provide either (attacks + datasets) or "
+                "(injections + scenarios), not both"
+            )
+        if injection:
+            if not self.injections or not self.scenarios:
+                raise ValueError(
+                    "injection mode requires both 'injections' and 'scenarios'"
+                )
+        elif not self.attacks or not self.datasets:
+            raise ValueError(
+                "jailbreak mode requires both 'attacks' and 'datasets' "
+                "(or configure 'injections' + 'scenarios' for the injection surface)"
+            )
+        return self
 
 
 def _coerce_specs(raw: Any, axis: str) -> list[dict]:
@@ -83,7 +120,7 @@ def load_config(path: str | Path) -> RunConfig:
     if not isinstance(raw, dict):
         raise ConfigError("config root must be a mapping")
 
-    for axis in ("targets", "attacks", "datasets", "judges"):
+    for axis in ("targets", "attacks", "datasets", "judges", "injections", "scenarios"):
         if axis in raw:
             raw[axis] = _coerce_specs(raw[axis], axis)
 

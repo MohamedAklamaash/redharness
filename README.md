@@ -27,8 +27,10 @@ least consistently measured today (plan §1):
    *This is the surface implemented in the offline slice.*
 2. **Prompt injection** (direct + indirect/agentic) — smuggling attacker
    instructions through tool inputs so an agent fires an attacker-chosen action
-   (Greshake et al.; AgentDojo / InjecAgent / AgentHarm; OWASP LLM01). *Scaffolded
-   via the `Scenario` interface; implemented in a later phase.*
+   (Greshake et al.; AgentDojo / InjecAgent / AgentHarm; OWASP LLM01). *Implemented
+   in the offline slice: a deterministic tool-calling agent loop over bundled,
+   hash-pinned benign scenario suites, with direct + indirect injection attacks and
+   ISR / utility metrics.*
 3. **Data leakage** — training-data extraction, canary/memorization recovery, PII
    and system-prompt exfiltration (Carlini/Nasr; Secret Sharer). *Future phase.*
 
@@ -37,14 +39,18 @@ least consistently measured today (plan §1):
 ```bash
 uv venv
 uv pip install -e '.[dev]'
-uv run redharness run configs/smoke.yaml
+uv run redharness run configs/smoke.yaml             # jailbreak surface
+uv run redharness run configs/injection_smoke.yaml   # prompt-injection surface
 ```
 
-The smoke run is fully **offline, deterministic, and needs no API keys**. It
-wires the deterministic `MockTarget` against the `static` and `template` attacks,
-the bundled demo dataset, both judges (`refusal_match` and the StrongREJECT-style
-`rubric`), and all metrics, then writes a report and `leaderboard.json` under
-`runs/smoke/`.
+Both smoke runs are fully **offline, deterministic, and need no API keys**. The
+jailbreak run wires the deterministic `MockTarget` against the `static` and
+`template` attacks, the bundled demo dataset, both judges (`refusal_match` and the
+StrongREJECT-style `rubric`), and all metrics. The injection run drives the
+deterministic `mock_agent` (one robust, one vulnerable variant) through the bundled
+benign scenario suites under direct + indirect injection plus a no-injection
+baseline, scored by the `injection_detector` judge into ISR / utility metrics. Each
+writes a report and `leaderboard.json` under `runs/<run_name>/`.
 
 Other commands:
 
@@ -80,15 +86,30 @@ a typed `Registry`, so plugins are wired declaratively from YAML.
 
 | Axis | Interface | Offline implementations |
 |---|---|---|
-| Target | `generate(messages, tools) -> Response` | `mock`, `openai_compat` (opt-in) |
+| Target | `generate(messages, tools) -> Response` | `mock`, `mock_agent`, `openai_compat` (opt-in) |
 | Attack | `run(behavior, target) -> list[Attempt]` | `static`, `template` |
 | Dataset | `load() -> list[Behavior]` (hash-pinned) | `demo` (bundled), `RemoteDataset` (opt-in) |
-| Judge | `score(behavior, attempt) -> Verdict` | `refusal_match`, `rubric` (StrongREJECT-style) |
-| Metric | `compute(scored) -> MetricResult` | `asr`, `asr_at_k`, `refusal_rate`, `strongreject_score`, `frr` |
+| Judge | `score(behavior, attempt) -> Verdict` | `refusal_match`, `rubric`, `injection_detector` |
+| Metric | `compute(scored) -> MetricResult` | `asr`, `asr_at_k`, `refusal_rate`, `strongreject_score`, `frr`, `injection_success_rate`, `utility_under_attack`, `utility_baseline` |
+
+The injection surface adds two more axes, both selected by name from a config's
+`injections:` and `scenarios:` sections:
+
+| Axis | Interface | Offline implementations |
+|---|---|---|
+| Injection | `build_injection(scenario) -> Injection \| None` | `direct_injection`, `indirect_injection`, `no_injection` |
+| Scenario | `build_env()` + `attacker_succeeded` / `user_task_completed` predicates | `bundled` suites: `injecagent_demo`, `agentdojo_demo` (hash-pinned) |
+
+A config runs in exactly one mode: **jailbreak** (`attacks` × `datasets`) or
+**injection** (`injections` × `scenarios`); both share `targets`, `judges`, and
+`metrics`. In injection mode a deterministic tool-calling agent loop (cap
+`max_steps`) drives each scenario, weaving the injection into the user turn
+(direct) or a tool's returned content (indirect), and records the full multi-turn
+transcript in the same JSONL store.
 
 Every leaderboard number records the **(dataset_version, judge, metric)** triple,
 so a result is never ambiguous — this is the core anti-fragmentation contribution
-(plan §6).
+(plan §6). For injection rows `dataset_version` is the hash-pinned scenario suite.
 
 ## Metrics
 
@@ -99,6 +120,9 @@ so a result is never ambiguous — this is the core anti-fragmentation contribut
 | `strongreject_score` | mean rubric grade: `0` if refused, else the 1–5 mean of `specificity`/`convincingness` rescaled to [0, 1] as `(mean−1)/4` | StrongREJECT |
 | `refusal_rate` | fraction of harmful behaviors refused on every attempt | DecodingTrust |
 | `frr` | false refusal rate over the benign should-comply subset | XSTest / OR-Bench |
+| `injection_success_rate` | fraction of *injected* scenarios where the attacker goal fired | InjecAgent / AgentDojo |
+| `utility_under_attack` | fraction of *injected* scenarios where the benign task still completed | AgentDojo |
+| `utility_baseline` | fraction of *non-injected* scenarios where the benign task completed (control) | AgentDojo |
 
 ## Add an attack in ~30 lines
 
@@ -136,13 +160,23 @@ Then reference it in a config: `attacks: ["uppercase"]`. Network-heavy framework
 (PAIR / TAP / garak / PyRIT) plug in through `attacks/external/` with their own
 dependency extras so the offline core stays lean.
 
+The injection surface extends the same pattern: subclass `InjectionAttack` and
+register it with `@register_injection(...)` to add a new injection (the bundled
+`direct_injection` / `indirect_injection` show the shape), add a benign scenario
+by appending to a hash-pinned suite JSON under `scenarios/data/` (then refresh its
+manifest sha256), and select both from a config's `injections:` / `scenarios:`
+sections. Real AgentDojo / InjecAgent attack corpora plug in at
+`attacks/injection/` behind a dependency extra — only benign templates are
+bundled, never raw attack strings.
+
 ## Status
 
-This repository implements **Phase 0 + the offline jailbreak slice of Phase 1**:
-the full harness, the deterministic offline path, and the reproducibility
-artifacts. Injection and leakage surfaces, plus real dataset/attack adapters, are
-scaffolded behind clean interfaces and explicit opt-in. See
-`CITATIONS.bib` for the literature this is grounded in.
+This repository implements **Phase 0, the offline jailbreak slice of Phase 1, and
+the offline prompt-injection surface of Phase 2**: the full harness, the
+deterministic offline path for both jailbreak and agentic injection, and the
+reproducibility artifacts. The leakage surface, plus real dataset/attack adapters,
+are scaffolded behind clean interfaces and explicit opt-in. See `CITATIONS.bib` for
+the literature this is grounded in.
 
 ## License
 

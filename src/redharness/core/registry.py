@@ -60,6 +60,11 @@ class _Registries:
         self.datasets: Registry = Registry("dataset")
         self.judges: Registry = Registry("judge")
         self.metrics: Registry = Registry("metric")
+        # The injection/agentic surface (Phase 2): injection attacks and scenario
+        # suites are their own axes, kept separate so a jailbreak ``attack`` and an
+        # ``injection`` of the same name never clash.
+        self.injections: Registry = Registry("injection")
+        self.scenarios: Registry = Registry("scenario")
 
     def by_axis(self) -> dict[str, Registry]:
         return {
@@ -68,6 +73,8 @@ class _Registries:
             "datasets": self.datasets,
             "judges": self.judges,
             "metrics": self.metrics,
+            "injections": self.injections,
+            "scenarios": self.scenarios,
         }
 
 
@@ -78,3 +85,5 @@ register_attack = registry.attacks.register
 register_dataset = registry.datasets.register
 register_judge = registry.judges.register
 register_metric = registry.metrics.register
+register_injection = registry.injections.register
+register_scenario = registry.scenarios.register

@@ -20,6 +20,14 @@ _env = Environment(
 )
 
 
+def _fmt_value(value: float | None) -> str:
+    """Format a metric value, rendering an N/A (``None``) cell as an em dash."""
+    return "—" if value is None else f"{value:.4f}"
+
+
+_env.filters["fmt_value"] = _fmt_value
+
+
 def build_leaderboard(result: RunResult) -> list[dict]:
     """Flatten cells into leaderboard rows tagged with the full provenance triple."""
     rows: list[dict] = []
@@ -59,7 +67,7 @@ def render_markdown(result: RunResult) -> str:
         lines.append("| metric | value |")
         lines.append("| --- | --- |")
         for name, metric in cell.metrics.items():
-            lines.append(f"| {name} | {metric.value:.4f} |")
+            lines.append(f"| {name} | {_fmt_value(metric.value)} |")
         lines.append("")
     return "\n".join(lines)
 

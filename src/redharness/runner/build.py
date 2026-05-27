@@ -51,3 +51,17 @@ def build_judge(spec: PluginSpec) -> Judge:
 
 def build_metric(name: str) -> Metric:
     return registry.metrics.get(name)
+
+
+def build_injection(spec: PluginSpec):
+    """Build an injection attack (plan §5 Phase 2)."""
+    instance = registry.injections.get(spec.name)(**spec.params)
+    setattr(instance, SPEC_ATTR, spec)
+    return instance
+
+
+def build_scenario_source(spec: PluginSpec):
+    """Build a scenario-suite source (e.g. the hash-pinned ``bundled`` loader)."""
+    instance = registry.scenarios.get(spec.name)(**spec.params)
+    setattr(instance, SPEC_ATTR, spec)
+    return instance

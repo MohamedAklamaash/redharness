@@ -18,28 +18,35 @@ from pathlib import Path
 
 from redharness.config import RunConfig
 from redharness.core.attack import Attack
-from redharness.core.dataset import Dataset
 from redharness.core.judge import Judge
 from redharness.core.metric import ScoredAttempts
 from redharness.core.models import Attempt, Behavior
 from redharness.core.target import Target
 from redharness.errors import RedharnessError
+from redharness.runner.agent_loop import run_agent_loop
 from redharness.runner.build import (
     SPEC_ATTR,
     build_attack,
     build_dataset,
+    build_injection,
     build_judge,
     build_metric,
+    build_scenario_source,
     build_target,
 )
 from redharness.runner.cache import AttemptCache, params_hash
 from redharness.runner.result import CellResult, RunResult
 
 
+def _plugin_params(plugin: object) -> dict:
+    """The params of the spec a plugin was built from (empty if none)."""
+    spec = getattr(plugin, SPEC_ATTR, None)
+    return dict(spec.params) if spec is not None else {}
+
+
 def _plugin_params_hash(plugin: object) -> str:
     """Hash the params of the spec a plugin was built from (empty if none)."""
-    spec = getattr(plugin, SPEC_ATTR, None)
-    return params_hash(dict(spec.params)) if spec is not None else params_hash({})
+    return params_hash(_plugin_params(plugin))
 
 
 class Runner:
@@ -63,36 +70,14 @@ class Runner:
 
     def run(self) -> RunResult:
         random.seed(self.config.seed)
-        targets = [build_target(s) for s in self.config.targets]
-        attacks = [build_attack(s) for s in self.config.attacks]
-        datasets = [build_dataset(s) for s in self.config.datasets]
         judges = [build_judge(s) for s in self.config.judges]
         metrics = [build_metric(name) for name in self.config.metrics]
 
-        loaded = {ds.name: (ds.version, ds.load()) for ds in datasets}
-
-        cells: list[CellResult] = []
         with self.transcript_path.open("w") as transcripts:
-            for dataset in datasets:
-                version, behaviors = loaded[dataset.name]
-                for target in targets:
-                    for attack in attacks:
-                        attempts = self._run_attack(
-                            attack, target, behaviors, transcripts
-                        )
-                        for judge in judges:
-                            cells.append(
-                                self._score_cell(
-                                    attack,
-                                    target,
-                                    dataset,
-                                    version,
-                                    judge,
-                                    behaviors,
-                                    attempts,
-                                    metrics,
-                                )
-                            )
+            if self.config.mode == "injection":
+                cells = self._run_injection(judges, metrics, transcripts)
+            else:
+                cells = self._run_jailbreak(judges, metrics, transcripts)
 
         return RunResult(
             run_id=self.run_id,
@@ -101,6 +86,89 @@ class Runner:
             cells=cells,
             transcript_path=str(self.transcript_path),
         )
+
+    def _run_jailbreak(self, judges, metrics, transcripts) -> list[CellResult]:
+        targets = [build_target(s) for s in self.config.targets]
+        attacks = [build_attack(s) for s in self.config.attacks]
+        datasets = [build_dataset(s) for s in self.config.datasets]
+        loaded = {ds.name: (ds.version, ds.load()) for ds in datasets}
+
+        cells: list[CellResult] = []
+        for dataset in datasets:
+            version, behaviors = loaded[dataset.name]
+            for target in targets:
+                for attack in attacks:
+                    attempts = self._run_attack(attack, target, behaviors, transcripts)
+                    for judge in judges:
+                        cells.append(
+                            self._score_cell(
+                                attack.name, target.name, dataset.name, version,
+                                judge, behaviors, attempts, metrics,
+                            )
+                        )
+        return cells
+
+    def _run_injection(self, judges, metrics, transcripts) -> list[CellResult]:
+        """Run the agentic injection matrix: injection x target x suite x judge."""
+        targets = [build_target(s) for s in self.config.targets]
+        injections = [build_injection(s) for s in self.config.injections]
+        sources = [build_scenario_source(s) for s in self.config.scenarios]
+        loaded = {src.suite: (src.version, src.load()) for src in sources}
+
+        cells: list[CellResult] = []
+        for source in sources:
+            version, scenarios = loaded[source.suite]
+            behaviors = [_scenario_behavior(s) for s in scenarios]
+            for target in targets:
+                for injection in injections:
+                    attempts = self._run_injection_attack(
+                        injection, target, scenarios, transcripts
+                    )
+                    for judge in judges:
+                        cells.append(
+                            self._score_cell(
+                                injection.name, target.name, source.suite, version,
+                                judge, behaviors, attempts, metrics,
+                            )
+                        )
+        return cells
+
+    def _run_injection_attack(
+        self, injection, target, scenarios, transcripts
+    ) -> list[Attempt]:
+        """Drive ``target`` through each scenario under ``injection``, with caching."""
+        target_hash = _plugin_params_hash(target)
+        # max_steps is passed into run_agent_loop and changes the attempt (a plan
+        # longer than max_steps completes differently), so it must be part of the
+        # cache key — same params-in-key invariant the jailbreak path upholds.
+        # Folding it into the injection-side hash keeps AttemptCache's signature
+        # unchanged while making the key sensitive to max_steps.
+        injection_hash = params_hash(
+            {
+                "params": _plugin_params(injection),
+                "max_steps": self.config.max_steps,
+            }
+        )
+        all_attempts: list[Attempt] = []
+        for scenario in scenarios:
+            cached = self.cache.get(
+                target.name, target_hash, injection.name, injection_hash,
+                scenario.name, scenario.user_task,
+            )
+            if cached is None:
+                payload = injection.build_injection(scenario)
+                attempt = run_agent_loop(
+                    scenario, target, payload, injection.name, self.config.max_steps
+                )
+                cached = [attempt]
+                self.cache.put(
+                    target.name, target_hash, injection.name, injection_hash,
+                    scenario.name, scenario.user_task, cached,
+                )
+            for attempt in cached:
+                transcripts.write(json.dumps(attempt.model_dump()) + "\n")
+            all_attempts.extend(cached)
+        return all_attempts
 
     def _run_attack(
         self,
@@ -131,9 +199,9 @@ class Runner:
 
     def _score_cell(
         self,
-        attack: Attack,
-        target: Target,
-        dataset: Dataset,
+        attack_name: str,
+        target_name: str,
+        dataset_name: str,
         version: str,
         judge: Judge,
         behaviors: list[Behavior],
@@ -147,17 +215,32 @@ class Runner:
             if behavior is None:
                 known = ", ".join(sorted(by_id)) or "(none)"
                 raise RedharnessError(
-                    f"attack {attack.name!r} produced an attempt for unknown "
-                    f"behavior_id {a.behavior_id!r}; dataset {dataset.name!r} has: {known}"
+                    f"attack {attack_name!r} produced an attempt for unknown "
+                    f"behavior_id {a.behavior_id!r}; dataset {dataset_name!r} has: {known}"
                 )
             scored.append((behavior, a, judge.score(behavior, a)))
         cell = CellResult(
-            attack=attack.name,
-            target=target.name,
-            dataset=dataset.name,
+            attack=attack_name,
+            target=target_name,
+            dataset=dataset_name,
             dataset_version=version,
             judge=judge.name,
         )
         for metric in metrics:
             cell.metrics[metric.name] = metric.compute(scored)
         return cell
+
+
+def _scenario_behavior(scenario) -> Behavior:
+    """Synthesise the Behavior wrapper a scenario presents to the scoring path.
+
+    One scenario maps to one behavior (id = scenario id, prompt = benign user
+    task), so the existing per-behavior scoring, report and leaderboard machinery
+    works unchanged for the injection surface.
+    """
+    return Behavior(
+        id=scenario.name,
+        prompt=scenario.user_task,
+        category=scenario.suite,
+        expected="should_refuse",
+    )

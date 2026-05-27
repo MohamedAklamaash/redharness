@@ -29,5 +29,8 @@ jobs:
       - name: Test
         run: pytest --cov=redharness --cov-report=term-missing
 
-      - name: Offline smoke eval (no secrets)
+      - name: Offline jailbreak smoke eval (no secrets)
         run: redharness run configs/smoke.yaml
+
+      - name: Offline injection smoke eval (no secrets)
+        run: redharness run configs/injection_smoke.yaml

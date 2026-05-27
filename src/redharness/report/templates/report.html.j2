@@ -31,7 +31,7 @@
   <table>
     <tr><th>Metric</th><th>Value</th></tr>
     {% for name, m in cell.metrics.items() %}
-    <tr><td>{{ name }}</td><td>{{ "%.4f"|format(m.value) }}</td></tr>
+    <tr><td>{{ name }}</td><td>{{ m.value | fmt_value }}</td></tr>
     {% endfor %}
   </table>
   {% endfor %}

@@ -48,6 +48,7 @@ packages = ["src/redharness"]
 # Non-.py package data (bundled dataset + HTML report template) ships in the wheel.
 artifacts = [
     "src/redharness/datasets/data/*.json",
+    "src/redharness/scenarios/data/*.json",
     "src/redharness/report/templates/*.j2",
 ]
 

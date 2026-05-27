@@ -53,10 +53,15 @@ def validate(
 ) -> None:
     """Validate a run config without executing it."""
     cfg = load_config(config)
+    if cfg.mode == "injection":
+        axes = (
+            f"{len(cfg.injections)} injection(s), {len(cfg.scenarios)} scenario suite(s)"
+        )
+    else:
+        axes = f"{len(cfg.attacks)} attack(s), {len(cfg.datasets)} dataset(s)"
     typer.echo(
-        f"config OK: {len(cfg.targets)} target(s), {len(cfg.attacks)} attack(s), "
-        f"{len(cfg.datasets)} dataset(s), {len(cfg.judges)} judge(s), "
-        f"{len(cfg.metrics)} metric(s)"
+        f"config OK ({cfg.mode} mode): {len(cfg.targets)} target(s), {axes}, "
+        f"{len(cfg.judges)} judge(s), {len(cfg.metrics)} metric(s)"
     )
 
 
