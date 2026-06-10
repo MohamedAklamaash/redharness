@@ -39,7 +39,12 @@ class RunConfig(BaseModel):
       * **jailbreak** — ``attacks`` x ``datasets`` (the Phase 1 matrix), or
       * **injection** — ``injections`` x ``scenarios`` (the Phase 2 agentic surface).
 
-    ``targets``, ``judges`` and ``metrics`` are shared by both. Exactly one mode
+    The Phase 3 data-leakage surface is single-turn (probe -> response -> detect
+    leak), structurally identical to the jailbreak matrix, so it reuses the
+    **jailbreak** mode with leakage attacks, the ``leakage_demo`` dataset, the
+    ``leak_detector`` judge, and the leakage metrics — no separate mode is needed.
+
+    ``targets``, ``judges`` and ``metrics`` are shared by all. Exactly one mode
     must be configured, so a config is never ambiguous about what it runs.
     """
 

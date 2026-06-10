@@ -15,3 +15,6 @@ htmlcov/
 runs/
 *.sqlite
 .DS_Store
+.reviewvenv/
+*venv/
+.venv*/

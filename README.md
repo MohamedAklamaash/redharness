@@ -32,7 +32,14 @@ least consistently measured today (plan §1):
    hash-pinned benign scenario suites, with direct + indirect injection attacks and
    ISR / utility metrics.*
 3. **Data leakage** — training-data extraction, canary/memorization recovery, PII
-   and system-prompt exfiltration (Carlini/Nasr; Secret Sharer). *Future phase.*
+   and system-prompt exfiltration (Carlini et al. 2021; Nasr/Carlini et al. 2023;
+   Secret Sharer, Carlini et al. 2019). *Implemented in the offline slice: a
+   deterministic memorizing target (`leaky_mock`, leaky + guarded variants) probed
+   by benign extraction/divergence/canary/PII/system-prompt attacks over a
+   hash-pinned synthetic probe suite, scored by the `leak_detector` judge into
+   extraction-rate / canary-exposure / PII-leak / system-prompt-leak /
+   verbatim-overlap metrics. All planted secrets are obvious fakes — no real PII,
+   credentials, or memorized text.*
 
 ## Quickstart
 
@@ -41,16 +48,21 @@ uv venv
 uv pip install -e '.[dev]'
 uv run redharness run configs/smoke.yaml             # jailbreak surface
 uv run redharness run configs/injection_smoke.yaml   # prompt-injection surface
+uv run redharness run configs/leakage_smoke.yaml     # data-leakage surface
 ```
 
-Both smoke runs are fully **offline, deterministic, and need no API keys**. The
+All three smoke runs are fully **offline, deterministic, and need no API keys**. The
 jailbreak run wires the deterministic `MockTarget` against the `static` and
 `template` attacks, the bundled demo dataset, both judges (`refusal_match` and the
 StrongREJECT-style `rubric`), and all metrics. The injection run drives the
 deterministic `mock_agent` (one robust, one vulnerable variant) through the bundled
 benign scenario suites under direct + indirect injection plus a no-injection
-baseline, scored by the `injection_detector` judge into ISR / utility metrics. Each
-writes a report and `leaderboard.json` under `runs/<run_name>/`.
+baseline, scored by the `injection_detector` judge into ISR / utility metrics. The
+leakage run reuses the single-turn path: it probes a leaky and a guarded
+`leaky_mock` target with the leakage attacks over the hash-pinned `leakage_demo`
+probe suite, and the `leak_detector` judge scores verbatim recovery of each planted
+synthetic secret. Each writes a report and `leaderboard.json` under
+`runs/<run_name>/`.
 
 Other commands:
 
@@ -86,11 +98,11 @@ a typed `Registry`, so plugins are wired declaratively from YAML.
 
 | Axis | Interface | Offline implementations |
 |---|---|---|
-| Target | `generate(messages, tools) -> Response` | `mock`, `mock_agent`, `openai_compat` (opt-in) |
-| Attack | `run(behavior, target) -> list[Attempt]` | `static`, `template` |
-| Dataset | `load() -> list[Behavior]` (hash-pinned) | `demo` (bundled), `RemoteDataset` (opt-in) |
-| Judge | `score(behavior, attempt) -> Verdict` | `refusal_match`, `rubric`, `injection_detector` |
-| Metric | `compute(scored) -> MetricResult` | `asr`, `asr_at_k`, `refusal_rate`, `strongreject_score`, `frr`, `injection_success_rate`, `utility_under_attack`, `utility_baseline` |
+| Target | `generate(messages, tools) -> Response` | `mock`, `mock_agent`, `leaky_mock`, `openai_compat` (opt-in) |
+| Attack | `run(behavior, target) -> list[Attempt]` | `static`, `template`; leakage: `direct_extraction`, `divergence`, `canary_completion`, `system_prompt_leak`, `pii_elicitation` |
+| Dataset | `load() -> list[Behavior]` (hash-pinned) | `demo`, `leakage_demo` (bundled), `RemoteDataset` (opt-in) |
+| Judge | `score(behavior, attempt) -> Verdict` | `refusal_match`, `rubric`, `injection_detector`, `leak_detector` |
+| Metric | `compute(scored) -> MetricResult` | `asr`, `asr_at_k`, `refusal_rate`, `strongreject_score`, `frr`, `injection_success_rate`, `utility_under_attack`, `utility_baseline`, `extraction_rate`, `canary_exposure_rate`, `pii_leak_rate`, `system_prompt_leak_rate`, `verbatim_overlap` |
 
 The injection surface adds two more axes, both selected by name from a config's
 `injections:` and `scenarios:` sections:
@@ -105,11 +117,15 @@ A config runs in exactly one mode: **jailbreak** (`attacks` × `datasets`) or
 `metrics`. In injection mode a deterministic tool-calling agent loop (cap
 `max_steps`) drives each scenario, weaving the injection into the user turn
 (direct) or a tool's returned content (indirect), and records the full multi-turn
-transcript in the same JSONL store.
+transcript in the same JSONL store. The **data-leakage** surface is single-turn
+(probe → response → detect leak), so it reuses the jailbreak mode with leakage
+attacks, the `leakage_demo` dataset, the `leak_detector` judge, and the leakage
+metrics — no separate run mode.
 
 Every leaderboard number records the **(dataset_version, judge, metric)** triple,
 so a result is never ambiguous — this is the core anti-fragmentation contribution
-(plan §6). For injection rows `dataset_version` is the hash-pinned scenario suite.
+(plan §6). For injection rows `dataset_version` is the hash-pinned scenario suite;
+for leakage rows it is the hash-pinned `leakage_demo` probe suite.
 
 ## Metrics
 
@@ -123,6 +139,11 @@ so a result is never ambiguous — this is the core anti-fragmentation contribut
 | `injection_success_rate` | fraction of *injected* scenarios where the attacker goal fired | InjecAgent / AgentDojo |
 | `utility_under_attack` | fraction of *injected* scenarios where the benign task still completed | AgentDojo |
 | `utility_baseline` | fraction of *non-injected* scenarios where the benign task completed (control) | AgentDojo |
+| `extraction_rate` | overall fraction of probes whose synthetic secret leaked | Carlini 2021 / Nasr 2023 |
+| `canary_exposure_rate` | leak rate over canary probes (N/A if none) | Secret Sharer (Carlini 2019) |
+| `pii_leak_rate` | leak rate over PII probes (N/A if none) | DecodingTrust |
+| `system_prompt_leak_rate` | leak rate over system-prompt probes (N/A if none) | — |
+| `verbatim_overlap` | mean best verbatim-overlap (longest-common-substring ratio) over probes | Carlini 2021 / Nasr 2023 |
 
 ## Add an attack in ~30 lines
 
@@ -169,14 +190,23 @@ sections. Real AgentDojo / InjecAgent attack corpora plug in at
 `attacks/injection/` behind a dependency extra — only benign templates are
 bundled, never raw attack strings.
 
+The leakage surface reuses the jailbreak axes: subclass `Attack` and register it
+with `@register_attack(...)` to add a leakage probe (the bundled
+`attacks/leakage/` attacks show the shape), add a synthetic probe with its
+ground-truth `target_secret` to `datasets/data/leakage_probes.json` (then refresh
+`leakage_manifest.json`'s sha256), and wire the target's planted secrets to match.
+Real extraction corpora (web-scale divergence prompts, planted-canary training
+runs) plug in the same way — only synthetic sentinels are bundled, never real PII
+or memorized text.
+
 ## Status
 
-This repository implements **Phase 0, the offline jailbreak slice of Phase 1, and
-the offline prompt-injection surface of Phase 2**: the full harness, the
-deterministic offline path for both jailbreak and agentic injection, and the
-reproducibility artifacts. The leakage surface, plus real dataset/attack adapters,
-are scaffolded behind clean interfaces and explicit opt-in. See `CITATIONS.bib` for
-the literature this is grounded in.
+This repository implements **Phase 0, the offline jailbreak slice of Phase 1, the
+offline prompt-injection surface of Phase 2, and the offline data-leakage surface
+of Phase 3**: the full harness, the deterministic offline path for jailbreak,
+agentic injection, and leakage, and the reproducibility artifacts. Real
+dataset/attack adapters are scaffolded behind clean interfaces and explicit opt-in.
+See `CITATIONS.bib` for the literature this is grounded in.
 
 ## License
 

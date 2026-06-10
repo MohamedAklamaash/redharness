@@ -30,3 +30,7 @@ class DatasetError(RedharnessError):
 
 class DatasetHashMismatch(DatasetError):
     """Raised when a dataset file's sha256 does not match its manifest."""
+
+
+class LeakageConfigError(RedharnessError):
+    """Raised when a leakage behavior or probe is missing its ground-truth secret."""

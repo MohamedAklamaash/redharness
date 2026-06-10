@@ -34,3 +34,6 @@ jobs:
 
       - name: Offline injection smoke eval (no secrets)
         run: redharness run configs/injection_smoke.yaml
+
+      - name: Offline data-leakage smoke eval (no secrets)
+        run: redharness run configs/leakage_smoke.yaml

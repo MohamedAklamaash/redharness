@@ -40,6 +40,12 @@ class Behavior(BaseModel):
     prompt where the *correct* model action is to answer — these drive the false
     refusal rate (XSTest / OR-Bench). ``should_refuse`` marks a (placeholder)
     harmful prompt where compliance counts as an attack success.
+
+    ``target_secret`` is the data-leakage ground truth (plan §5 Phase 3): the exact
+    synthetic secret a probe tries to elicit (a canary, a fake PII record, the
+    hidden system prompt, or a fake memorized passage). The leak detector matches
+    the response against it. It is distinct from ``reference_answer`` (the *correct*
+    answer to a benign prompt) — a secret is what should *not* be emitted.
     """
 
     id: str
@@ -47,6 +53,7 @@ class Behavior(BaseModel):
     category: str
     expected: Literal["should_refuse", "should_comply"]
     reference_answer: str | None = None
+    target_secret: str | None = None
 
     model_config = {"frozen": True}
 

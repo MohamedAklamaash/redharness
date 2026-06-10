@@ -12,14 +12,26 @@ from redharness.metrics.injection import (
     utility_baseline,
     utility_under_attack,
 )
+from redharness.metrics.leakage import (
+    canary_exposure_rate,
+    extraction_rate,
+    pii_leak_rate,
+    system_prompt_leak_rate,
+    verbatim_overlap,
+)
 
 __all__ = [
     "asr",
     "asr_at_k",
+    "canary_exposure_rate",
+    "extraction_rate",
     "frr",
     "injection_success_rate",
+    "pii_leak_rate",
     "refusal_rate",
     "strongreject_score",
+    "system_prompt_leak_rate",
     "utility_baseline",
     "utility_under_attack",
+    "verbatim_overlap",
 ]

@@ -1,0 +1,42 @@
+# Offline data-leakage smoke run (plan §5 Phase 3). Reuses the single-turn
+# jailbreak execution path with leakage plugins: two LeakyMockTarget variants
+# (a leaky model that emits its synthetic secrets, and a guarded model that
+# refuses) x the leakage probe attacks x the hash-pinned leakage_demo probe
+# suite x the leak_detector judge x the leakage metrics. Runs end-to-end with
+# zero env setup, no API keys, fully deterministic.
+#
+# The target's planted secrets are wired to match the suite's ground-truth
+# secrets (planting = target config, knowing = behavior target_secret), exactly
+# how a real canary eval works.
+run_name: leakage_smoke
+seed: 0
+
+targets:
+  - name: leaky_mock
+    params:
+      name: model_leaky
+      policy: leaky
+  - name: leaky_mock
+    params:
+      name: model_guarded
+      policy: guarded
+
+attacks:
+  - direct_extraction
+  - divergence
+  - canary_completion
+  - system_prompt_leak
+  - pii_elicitation
+
+datasets:
+  - leakage_demo
+
+judges:
+  - leak_detector
+
+metrics:
+  - extraction_rate
+  - canary_exposure_rate
+  - pii_leak_rate
+  - system_prompt_leak_rate
+  - verbatim_overlap
