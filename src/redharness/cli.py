@@ -1,9 +1,10 @@
 """The ``redharness`` command-line interface.
 
-Three subcommands:
+Four subcommands:
   * ``run <config>``      — execute the eval and write a report + leaderboard.
   * ``validate <config>`` — parse and validate a config without running.
   * ``list``              — show every registered plugin by axis.
+  * ``dashboard``         — aggregate every run into one static HTML leaderboard.
 
 Errors are mapped to clear messages and a non-zero exit so CI fails loudly.
 """
@@ -18,7 +19,8 @@ import typer
 import redharness.plugins  # noqa: F401  (populates registries)
 from redharness.config import load_config
 from redharness.core.registry import registry
-from redharness.errors import RedharnessError
+from redharness.dashboard import write_dashboard
+from redharness.errors import DashboardError, RedharnessError
 from redharness.report import write_reports
 from redharness.runner import Runner
 
@@ -63,6 +65,25 @@ def validate(
         f"config OK ({cfg.mode} mode): {len(cfg.targets)} target(s), {axes}, "
         f"{len(cfg.judges)} judge(s), {len(cfg.metrics)} metric(s)"
     )
+
+
+@app.command()
+def dashboard(
+    runs_dir: Path = typer.Option(Path("runs"), help="Directory of run artifacts to aggregate."),
+    out: Path = typer.Option(Path("dashboard.html"), help="Output HTML file."),
+    label: str = typer.Option(
+        None, help="Optional static 'generated' label (e.g. a release tag); omitted by default."
+    ),
+) -> None:
+    """Aggregate every run's leaderboard.json into one self-contained dashboard.html."""
+    if runs_dir.exists() and not runs_dir.is_dir():
+        raise DashboardError(f"runs path is not a directory: {runs_dir}")
+
+    data = write_dashboard(runs_dir, out, generated_label=label)
+    typer.echo(f"dashboard written: {out}")
+    typer.echo(f"  {data.run_count} run(s), {data.cell_count} metric cell(s)")
+    for warning in data.warnings:
+        typer.secho(f"  skipped: {warning}", fg=typer.colors.YELLOW, err=True)
 
 
 @app.command(name="list")

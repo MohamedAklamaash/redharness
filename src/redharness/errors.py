@@ -34,3 +34,7 @@ class DatasetHashMismatch(DatasetError):
 
 class LeakageConfigError(RedharnessError):
     """Raised when a leakage behavior or probe is missing its ground-truth secret."""
+
+
+class DashboardError(RedharnessError):
+    """Raised when the dashboard cannot read its runs directory."""

@@ -71,6 +71,31 @@ uv run redharness list                 # show registered plugins by axis
 uv run redharness validate configs/smoke.yaml   # validate a config without running
 ```
 
+## Dashboard
+
+After one or more runs, aggregate every `runs/*/leaderboard.json` into a single
+static leaderboard page:
+
+```bash
+uv run redharness dashboard                       # reads runs/, writes dashboard.html
+uv run redharness dashboard --runs-dir runs --out site/dashboard.html
+```
+
+`dashboard.html` is **fully self-contained** — no CDNs, no network at view time — so
+you can open it straight from `file://`. It groups results by attack surface
+(jailbreak / injection / leakage / other, derived from each metric), renders a
+sortable, filterable table per surface so you can compare targets per (attack,
+metric), and draws CSS/SVG bars for the 0–1 rate metrics. N/A cells render as `—`.
+
+Output is **deterministic**: no wall-clock time is read, so regenerating over the
+same runs produces byte-identical HTML (pass `--label <tag>` to stamp a static
+release label). Leaderboard files are treated as untrusted input — the aggregated
+data is embedded as escaped JSON in a `<script type="application/json">` island and
+rendered into the DOM via `textContent`, never `innerHTML`, so a hostile string in a
+submitted `leaderboard.json` cannot inject markup. A missing/empty runs directory
+yields a friendly "no runs yet" page; a malformed `leaderboard.json` is skipped with
+a warning rather than aborting the whole dashboard.
+
 ## Architecture
 
 A five-axis plugin model; every run is a matrix of Attack × Target × Dataset ×

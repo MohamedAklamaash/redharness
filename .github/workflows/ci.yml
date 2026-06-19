@@ -37,3 +37,6 @@ jobs:
 
       - name: Offline data-leakage smoke eval (no secrets)
         run: redharness run configs/leakage_smoke.yaml
+
+      - name: Generate leaderboard dashboard from smoke runs
+        run: redharness dashboard --out dashboard.html
