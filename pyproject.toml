@@ -35,6 +35,10 @@ dev = [
 openai = [
     "httpx>=0.27",
 ]
+dashboard = [
+    "streamlit>=1.40",
+    "pandas>=2",
+]
 
 [project.scripts]
 redharness = "redharness.cli:main"
@@ -50,7 +54,6 @@ artifacts = [
     "src/redharness/datasets/data/*.json",
     "src/redharness/scenarios/data/*.json",
     "src/redharness/report/templates/*.j2",
-    "src/redharness/dashboard/templates/*.j2",
 ]
 
 [tool.pytest.ini_options]

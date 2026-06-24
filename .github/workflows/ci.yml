@@ -38,5 +38,25 @@ jobs:
       - name: Offline data-leakage smoke eval (no secrets)
         run: redharness run configs/leakage_smoke.yaml
 
-      - name: Generate leaderboard dashboard from smoke runs
-        run: redharness dashboard --out dashboard.html
+      - name: Aggregate leaderboards from smoke runs (no server, no streamlit)
+        run: |
+          python -c "from pathlib import Path; from redharness.dashboard.aggregate import aggregate_runs; data = aggregate_runs(Path('runs')); print(f'{data.run_count} run(s), {data.cell_count} cell(s)'); assert data.rows, 'no leaderboard rows aggregated from smoke runs'"
+
+  dashboard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install project (dashboard extra)
+        run: uv pip install --system -e '.[dashboard]'
+
+      - name: Ensure the Streamlit app imports
+        run: python -c "import redharness.dashboard.app"
+
+      - name: Ensure the dashboard CLI is wired up
+        run: redharness dashboard --help

@@ -8,7 +8,7 @@ that are today measured inconsistently and incomparably — **jailbreaks**, **pr
 injection**, and **data leakage** — under a single pluggable methodology with a strict
 reproducibility contract and per-result provenance.
 
-> **Hands-on usage** (installation, running evaluations, reading outputs, generating and
+> **Hands-on usage** (installation, running evaluations, reading outputs, launching and
 > using the leaderboard dashboard, writing your own configs) lives in
 > [`docs/OVERVIEW.md`](docs/OVERVIEW.md). This README documents *what* the benchmark is,
 > *why* it exists, and *who* it is for.
@@ -74,8 +74,8 @@ reproducible, provenance-tracked answer.
 - **Designed for interoperability, not re-implementation.** Accepted datasets and judges
   are integrated as plugins so results align with published work; established tooling
   (garak, PyRIT, Inspect) attaches through documented extension seams rather than forks.
-- **A self-contained, gaming-aware leaderboard dashboard** that aggregates all runs into a
-  single offline artifact and treats submitted results as untrusted input.
+- **A gaming-aware leaderboard dashboard** — an optional Streamlit web app that aggregates
+  all runs into a filterable, per-surface view and treats submitted results as untrusted input.
 
 ## 3. Background and related work
 
@@ -227,9 +227,10 @@ All metrics are defined as pure functions over scored attempts; inapplicable
 The harness is deterministic and fully offline by default — no API keys are required for the
 bundled evaluations, and results are identical across machines and runs. Each run emits a
 Markdown and HTML report, a machine-readable `leaderboard.json` (with the provenance triple
-on every row), and a complete JSONL transcript. A `redharness dashboard` command aggregates
-every run into one self-contained, deterministic, offline HTML leaderboard. The literature
-the framework is grounded in is enumerated in [`CITATIONS.bib`](CITATIONS.bib).
+on every row), and a complete JSONL transcript. The optional `redharness dashboard` command
+launches a Streamlit web app that aggregates every run into a filterable, per-surface
+leaderboard. The literature the framework is grounded in is enumerated in
+[`CITATIONS.bib`](CITATIONS.bib).
 
 ## 9. Limitations and current scope
 

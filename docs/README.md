@@ -18,8 +18,10 @@ uv run redharness run configs/smoke.yaml             # jailbreak
 uv run redharness run configs/injection_smoke.yaml   # prompt injection
 uv run redharness run configs/leakage_smoke.yaml     # data leakage
 
-uv run redharness dashboard --label benchmark-v1     # aggregate -> dashboard.html
 uv run redharness list                               # every registered plugin by axis
+
+uv pip install -e '.[dashboard]'                     # optional: the Streamlit dashboard
+uv run redharness dashboard                           # launches Streamlit at http://localhost:8501
 ```
 
 Everything runs fully offline, deterministically, with no API keys.

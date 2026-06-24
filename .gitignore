@@ -13,7 +13,7 @@ build/
 htmlcov/
 .coverage
 runs/
-dashboard.html
+.streamlit/
 *.sqlite
 .DS_Store
 .reviewvenv/

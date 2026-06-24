@@ -458,7 +458,7 @@ name in a config and run it:
 ```bash
 uv run redharness validate configs/my_run.yaml   # catch wiring mistakes first
 uv run redharness run configs/my_run.yaml         # writes runs/<run_name>/
-uv run redharness dashboard --label my-experiment # aggregate into dashboard.html
+uv run redharness dashboard                        # optional: launch the Streamlit leaderboard
 ```
 
 See [`configuration.md`](configuration.md) for the full config schema and

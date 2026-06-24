@@ -121,6 +121,6 @@ Each run writes to `runs/<run_name>/`:
 | `leaderboard.json` | One row per `(attack, target, dataset, judge, metric)`, each carrying the `(dataset_version, judge, metric)` provenance triple. N/A values are `null`. |
 | `transcripts.jsonl` | The full transcript of every attempt (the audit trail). |
 
-Aggregate all runs into a single offline page with `uv run redharness dashboard`. See
-[`OVERVIEW.md`](OVERVIEW.md) for the dashboard, and [`extending.md`](extending.md) to add
-your own plugins.
+Launch the optional Streamlit leaderboard over all runs with `uv pip install -e '.[dashboard]'`
+then `uv run redharness dashboard`. See [`OVERVIEW.md`](OVERVIEW.md) for the dashboard, and
+[`extending.md`](extending.md) to add your own plugins.

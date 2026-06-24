@@ -45,8 +45,8 @@ much, under what threat model?" with a number anyone can reproduce.
 4. **Provenance on every number.** Each leaderboard cell records the
    `(dataset_version, judge, metric)` triple, so a value is never ambiguous about how it
    was produced.
-5. **A static, offline, gaming-aware dashboard** that aggregates every run into one
-   self-contained HTML page.
+5. **A gaming-aware Streamlit dashboard** that aggregates every run into one filterable,
+   per-surface web app (optional extra).
 
 ---
 
@@ -169,20 +169,23 @@ registered names (see `redharness list`), then `validate` and `run` it.
 
 ## Using the dashboard
 
-After one or more runs, aggregate every `runs/*/leaderboard.json` into a single page:
+The dashboard is a [Streamlit](https://streamlit.io/) web app, shipped as an optional
+extra so the offline core stays lean. Install it, then launch it over a runs directory:
 
 ```bash
-uv run redharness dashboard                                # reads runs/, writes dashboard.html
-uv run redharness dashboard --out site/dashboard.html      # custom output path
-uv run redharness dashboard --label benchmark-v1           # stamp a static release label
-open dashboard.html                                        # view it (or double-click)
+uv pip install -e '.[dashboard]'
+uv run redharness dashboard                              # launches Streamlit at http://localhost:8501
+uv run redharness dashboard --runs-dir runs --port 8502  # custom runs dir / port
 ```
 
-The dashboard groups results by surface (jailbreak / injection / leakage), renders a
-sortable, filterable table per surface so you can compare targets per `(attack, metric)`,
-and draws CSS/SVG bars for the 0–1 rate metrics (N/A cells show as `—`). It is **fully
-self-contained** (no CDNs, opens from `file://`), **deterministic** (byte-identical
-regeneration), and **XSS-safe** — submitted leaderboards are treated as untrusted input.
+It reads every `runs/*/leaderboard.json`, groups the rows by surface (jailbreak /
+injection / leakage / other), and shows top-line summary metrics, a **sidebar** with
+filters (surface / target / attack-probe / metric / free-text search), and a **section per
+surface** with a sortable table — target, attack, dataset, judge, metric, value (N/A cells
+show as `—`) — plus a **bar chart** comparing targets on that surface's 0–1 rate metrics.
+Submitted leaderboards are treated as untrusted input and rendered as data through
+Streamlit widgets. If the extra is not installed, `redharness dashboard` prints a clear
+install hint and exits non-zero.
 
 ---
 
