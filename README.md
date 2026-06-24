@@ -264,10 +264,10 @@ benchmarks and methods it integrates (see [`CITATIONS.bib`](CITATIONS.bib)).
 @software{redharness,
   title  = {redharness: A Standardized, Reproducible Benchmark for Adversarial
             Evaluation of Large Language Models},
-  author = {aklamaash},
+  author = {Mohamed Aklamaash},
   year   = {2026},
   note   = {Jailbreak, prompt-injection, and data-leakage evaluation harness},
-  url    = {https://github.com/aklamaash/redharness}
+  url    = {https://github.com/MohamedAklamaash/redharness}
 }
 ```
 
