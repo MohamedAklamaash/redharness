@@ -9,6 +9,7 @@ launch in tests).
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -191,9 +192,16 @@ def test_build_rate_chart_frame_empty_when_no_rate_cells(tmp_path):
 
 
 def test_dashboard_help_documents_streamlit_and_options():
-    result = runner.invoke(app, ["dashboard", "--help"])
+    # Render help wide and uncolored so Rich does not wrap/style the option names,
+    # which would otherwise make the substring checks terminal-width dependent (CI
+    # runs in a narrow, non-TTY terminal).
+    result = runner.invoke(
+        app,
+        ["dashboard", "--help"],
+        env={"COLUMNS": "200", "NO_COLOR": "1", "TERM": "dumb"},
+    )
     assert result.exit_code == 0
-    out = result.stdout
+    out = re.sub(r"\x1b\[[0-9;]*m", "", result.stdout)
     assert "--runs-dir" in out
     assert "--port" in out
     assert "--out" not in out  # the old HTML option is gone
