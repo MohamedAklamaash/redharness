@@ -1201,11 +1201,15 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+anthropic = [
+    { name = "httpx" },
+]
 dashboard = [
     { name = "pandas" },
     { name = "streamlit" },
 ]
 dev = [
+    { name = "httpx" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "ruff" },
@@ -1216,6 +1220,8 @@ openai = [
 
 [package.metadata]
 requires-dist = [
+    { name = "httpx", marker = "extra == 'anthropic'", specifier = ">=0.27" },
+    { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27" },
     { name = "httpx", marker = "extra == 'openai'", specifier = ">=0.27" },
     { name = "jinja2", specifier = ">=3" },
     { name = "pandas", marker = "extra == 'dashboard'", specifier = ">=2" },
@@ -1227,7 +1233,7 @@ requires-dist = [
     { name = "streamlit", marker = "extra == 'dashboard'", specifier = ">=1.40" },
     { name = "typer", specifier = ">=0.12" },
 ]
-provides-extras = ["dev", "openai", "dashboard"]
+provides-extras = ["dev", "openai", "anthropic", "dashboard"]
 
 [[package]]
 name = "referencing"

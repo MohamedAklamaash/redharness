@@ -51,6 +51,15 @@ class RunConfig(BaseModel):
     run_name: str = "redharness-run"
     seed: int = 0
     max_steps: int = Field(default=6, ge=1, le=64)
+    # Hard run-level query budget: the maximum number of REAL outbound provider
+    # calls — counting transient retries (429/5xx/timeout) and every provider an
+    # attack uses (e.g. PAIR's attacker + target + in-loop judge) — for the whole
+    # run. Enforced fail-closed at the innermost call site: the run aborts with a
+    # typed RunBudgetExceeded the instant the ceiling is crossed (bounded overshoot
+    # is only the in-flight retries of one call), so a live eval can never overspend
+    # against a paid provider. Cache hits do not count. ``None`` means unbounded
+    # (the offline default); when set it is pydantic-bounded.
+    max_queries: int | None = Field(default=None, ge=1, le=10_000_000)
     targets: list[PluginSpec] = Field(min_length=1)
     judges: list[PluginSpec] = Field(min_length=1)
     metrics: list[str] = Field(min_length=1)

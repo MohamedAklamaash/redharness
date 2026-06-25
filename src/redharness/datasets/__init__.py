@@ -3,5 +3,6 @@
 from redharness.datasets.demo import DemoDataset
 from redharness.datasets.leakage import LeakageDataset
 from redharness.datasets.remote import RemoteDataset
+from redharness.datasets.strongreject import StrongRejectDataset
 
-__all__ = ["DemoDataset", "LeakageDataset", "RemoteDataset"]
+__all__ = ["DemoDataset", "LeakageDataset", "RemoteDataset", "StrongRejectDataset"]

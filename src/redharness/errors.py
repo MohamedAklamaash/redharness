@@ -21,7 +21,27 @@ class ConfigError(RedharnessError):
 
 
 class TargetConfigError(RedharnessError):
-    """Raised when a target is misconfigured (e.g. missing API credentials)."""
+    """Raised when a target is misconfigured (e.g. missing API credentials or
+    a missing optional extra). These are non-retryable and surfaced at construction
+    or before any retry is attempted."""
+
+
+class TargetRuntimeError(RedharnessError):
+    """Raised when a live target call fails transiently or at runtime.
+
+    Covers exhausted retries (429/5xx), connection/read timeouts, non-auth 4xx
+    (e.g. 400 validation), and unparseable response bodies. Distinct from
+    :class:`TargetConfigError` so callers (e.g. the PAIR loop) can degrade to a
+    best-effort attempt on runtime failures while still aborting on misconfig.
+    """
+
+
+class RunBudgetExceeded(RedharnessError):
+    """Raised when a run exceeds its configured ``max_queries`` budget.
+
+    The budget is enforced fail-closed: the run aborts cleanly with this typed
+    error rather than silently overspending against a paid provider.
+    """
 
 
 class DatasetError(RedharnessError):

@@ -208,9 +208,15 @@ Implemented: the full three-surface harness, the reproducibility contract, the l
 export, and the aggregating dashboard — all runnable fully offline with deterministic,
 test-locked metric values.
 
-Planned: a hosted leaderboard with a held-out, gaming-resistant submission verifier; live
-model adapters (OpenAI-compatible) and bundled real attack/extraction corpora behind
-explicit opt-in; and a technical report.
+Live (behind optional extras + environment-only keys): hardened `openai_compat` and
+`anthropic` target adapters, the PAIR attack (Chao et al. 2023) with an injected attacker
+model and judge, and the StrongREJECT forbidden-prompt set plus its autograder, all with a
+hard, fail-closed `max_queries` budget. See `configs/real_eval.example.yaml` and the "Live
+evaluation" section of [`configuration.md`](configuration.md). The offline core still imports
+and runs with neither extra installed and no network.
+
+Planned: a hosted leaderboard with a held-out, gaming-resistant submission verifier; bundled
+real attack/extraction corpora behind explicit opt-in; and a technical report.
 
 ## Responsible use
 
@@ -218,3 +224,9 @@ explicit opt-in; and a technical report.
 ships realistic but synthetic refusal-probe behaviors and synthetic secrets — no operational
 harmful content, no real PII, no memorized/copyrighted text (and no CBRN/explosives content).
 Real datasets are fetched-and-verified by hash behind an explicit opt-in.
+
+**LIVE mode** (real providers via the `openai_compat`/`anthropic` adapters, the `pair`
+attack, or the `strongreject` data) is for **authorized use only**: you are responsible for
+each provider's Terms of Service, should use personal/research keys rather than production
+credentials, and own the handling and retention of any harmful outputs written locally under
+`runs/`. Live numbers are single-sample and non-reproducible; cap spend with `max_queries`.

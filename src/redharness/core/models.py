@@ -24,11 +24,19 @@ class Message(BaseModel):
 
 
 class Response(BaseModel):
-    """A target's reply to a list of messages."""
+    """A target's reply to a list of messages.
+
+    ``http_calls`` is the number of *real* outbound HTTP calls the adapter made to
+    produce this response, including transient retries (429/5xx/timeout). It is a
+    plain integer carrying zero credential data, surfaced so the run-level query
+    budget can be charged the true provider-call count at the innermost call site.
+    Offline/reference targets make no HTTP call and leave it at the default ``1``.
+    """
 
     text: str
     target_name: str
     raw: dict[str, Any] = Field(default_factory=dict)
+    http_calls: int = 1
 
     model_config = {"frozen": True}
 

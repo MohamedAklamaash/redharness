@@ -31,7 +31,23 @@ def build_target(spec: PluginSpec) -> Target:
 
 
 def build_attack(spec: PluginSpec) -> Attack:
-    instance = registry.attacks.get(spec.name)(**spec.params)
+    """Build an attack, materialising nested ``attacker``/``judge`` sub-specs.
+
+    Search attacks (e.g. ``pair``) take an injected attacker :class:`Target` and a
+    :class:`Judge` rather than instantiating them internally — same pattern as
+    :func:`build_judge`'s ``grader``. We pop the sub-specs, build them, and pass
+    the live objects to the constructor. The *original* spec (with the nested
+    dicts intact) is recorded under ``SPEC_ATTR`` so the runner's cache key folds
+    in the attacker model / ``max_iters`` and busts when they change.
+    """
+    params = dict(spec.params)
+    attacker_spec = params.pop("attacker", None)
+    if attacker_spec is not None:
+        params["attacker"] = build_target(PluginSpec.model_validate(attacker_spec))
+    judge_spec = params.pop("judge", None)
+    if judge_spec is not None:
+        params["judge"] = build_judge(PluginSpec.model_validate(judge_spec))
+    instance = registry.attacks.get(spec.name)(**params)
     setattr(instance, SPEC_ATTR, spec)
     return instance
 

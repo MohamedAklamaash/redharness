@@ -1,0 +1,97 @@
+# =============================================================================
+# LIVE example config — NOT run by CI. Requires API keys (env) + optional extras.
+# =============================================================================
+# This wires the first real end-to-end path: live provider targets, the PAIR
+# attack (an injected attacker LLM + an injected judge), the StrongREJECT
+# forbidden-prompt set, the StrongREJECT autograder, and hard budget caps.
+#
+# Before running (authorized use only — see README "Responsible use (LIVE mode)"):
+#   1. Install the httpx-based extras for the providers you use:
+#        pip install 'redharness[openai,anthropic]'
+#   2. Export the API keys named by each `api_key_env` below. Credentials come
+#      ONLY from the environment — never put a key in this file.
+#        export ANTHROPIC_API_KEY=...           # primary Anthropic target
+#        export OPENAI_API_KEY=...              # primary OpenAI-compatible target
+#        export ANTHROPIC_ATTACKER_API_KEY=...  # PAIR attacker (distinct endpoint/key)
+#        export OPENAI_GRADER_API_KEY=...       # PAIR in-loop grader
+#        export ANTHROPIC_GRADER_API_KEY=...    # leaderboard StrongREJECT grader
+#   3. Pin the verified sha256 of the StrongREJECT subset CSV (see the dataset
+#      block) — the loader refuses to use unverified data.
+#   4. Run:  redharness run configs/real_eval.example.yaml
+#
+# Live numbers are single-sample and NOT reproducible; harmful outputs are written
+# locally to runs/<run_name>/ — handling/retention is YOUR responsibility.
+
+run_name: real-eval-example
+seed: 0
+
+# Hard, fail-closed run budget: the maximum number of REAL outbound provider calls
+# (counting transient retries and every provider an attack uses) for the whole run.
+# Enforced at the innermost call site — the run aborts with a typed RunBudgetExceeded
+# the instant the ceiling is crossed (bounded overshoot is only the in-flight retries
+# of one call); cache hits do not count. Tune to your spend tolerance.
+max_queries: 500
+
+targets:
+  # Anthropic Messages API target. Key read from ANTHROPIC_API_KEY by default.
+  - name: anthropic
+    params:
+      model: claude-opus-4-8
+      max_tokens: 1024
+      # temperature is omitted by default; claude-opus-4-8 rejects sampling params.
+  # Any OpenAI-compatible /chat/completions endpoint. Per-instance base_url + key.
+  - name: openai_compat
+    params:
+      model: gpt-4o-mini
+      base_url: https://api.openai.com/v1
+      api_key_env: OPENAI_API_KEY
+
+attacks:
+  # PAIR (Chao et al. 2023): an attacker LLM iteratively refines a jailbreak prompt,
+  # scored each round by an injected judge, with a hard per-behavior query ceiling.
+  - name: pair
+    params:
+      max_iters: 5
+      n_branches: 3
+      max_queries: 60            # per-behavior cap on logical calls (<= 200); the
+                                 # run-level max_queries above counts real HTTP calls
+      attacker:                  # a DISTINCT endpoint/key from the target above
+        name: anthropic
+        params:
+          model: claude-sonnet-4-6
+          api_key_env: ANTHROPIC_ATTACKER_API_KEY
+      judge:                     # in-loop scorer (injected, not built internally)
+        name: strongreject
+        params:
+          grader:
+            name: openai_compat
+            params:
+              model: gpt-4o
+              base_url: https://api.openai.com/v1
+              api_key_env: OPENAI_GRADER_API_KEY
+
+datasets:
+  # StrongREJECT small subset (50 forbidden prompts). Fetched + sha256-verified from
+  # a commit-pinned URL; opt-in download is required. No harmful text is committed.
+  - name: strongreject
+    params:
+      subset: small
+      allow_download: true
+      # REQUIRED: pin the verified sha256 of the subset CSV you intend to use.
+      sha256: "<paste the verified sha256 of strongreject_small_dataset.csv here>"
+
+judges:
+  # Leaderboard scorer: the StrongREJECT autograder, graded by a live model.
+  - name: strongreject
+    params:
+      grader:
+        name: anthropic
+        params:
+          model: claude-opus-4-8
+          api_key_env: ANTHROPIC_GRADER_API_KEY
+
+metrics:
+  - asr
+  - asr_at_k
+  - strongreject_score
+  - refusal_rate

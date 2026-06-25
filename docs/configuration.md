@@ -16,6 +16,7 @@ uv run redharness validate configs/smoke.yaml
 | `run_name` | string | yes | Output folder name. Must match `^[A-Za-z0-9._-]{1,128}$` (no `/`, `..`); validated to prevent path traversal. |
 | `seed` | int | no (default `0`) | Seeds deterministic execution. |
 | `max_steps` | int | no (default `6`) | Injection mode only: cap on agent-loop steps (1–64). |
+| `max_queries` | int | no (default unbounded) | Hard, fail-closed run-level query budget (1–10,000,000). The run aborts with a typed `RunBudgetExceeded` once exceeded — used to cap spend in live mode. |
 | `targets` | list | yes | Target plugins (the systems under test). |
 | `judges` | list | yes | Judge plugins (scorers). |
 | `metrics` | list | yes | Metric plugins (aggregators). |
@@ -115,6 +116,68 @@ attacks: [direct_extraction, divergence, canary_completion, system_prompt_leak, 
 datasets: [leakage_demo]
 judges: [leak_detector]
 metrics: [extraction_rate, canary_exposure_rate, pii_leak_rate, system_prompt_leak_rate, verbatim_overlap]
+```
+
+## Live evaluation
+
+By default everything runs offline against deterministic reference targets. A first **live**
+path is available behind optional extras and environment-only credentials. Read the
+"Responsible use — LIVE mode" note in the [README](../README.md) first: authorized use only,
+you are responsible for provider ToS, use personal not production keys, harmful outputs are
+written locally (your responsibility for handling/retention), and live numbers are
+single-sample / non-reproducible. A complete, commented template is in
+[`configs/real_eval.example.yaml`](../configs/real_eval.example.yaml) (not run by CI).
+
+**Install the extras** for the providers you use (both are httpx-based):
+
+```bash
+uv pip install -e '.[openai,anthropic]'
+```
+
+**Per-instance endpoint + key wiring.** Every live adapter takes its model, an optional
+`base_url`, and `api_key_env` — the **name** of the environment variable holding the key.
+Credentials are read only from the environment, never from YAML, so a target, a PAIR
+attacker, and a grader can each point at a distinct endpoint/key:
+
+```yaml
+max_queries: 500                 # hard, fail-closed spend cap (typed abort when exceeded)
+targets:
+  - name: anthropic              # POST https://api.anthropic.com/v1/messages
+    params:
+      model: claude-opus-4-8     # x-api-key from ANTHROPIC_API_KEY (default)
+      max_tokens: 1024
+  - name: openai_compat          # POST {base_url}/chat/completions
+    params:
+      model: gpt-4o-mini
+      base_url: https://api.openai.com/v1
+      api_key_env: OPENAI_API_KEY
+```
+
+**PAIR (`pair`) with an injected attacker + judge.** The attack does not build its own
+providers; the run builder materialises the nested `attacker` (a target spec) and `judge` (a
+judge spec, with its own `grader`) before constructing the attack. `max_queries` here is a
+hard per-behavior ceiling (1–200) that counts every attacker/target/judge call:
+
+```yaml
+attacks:
+  - name: pair
+    params:
+      max_iters: 5
+      n_branches: 3
+      max_queries: 60
+      attacker:
+        name: anthropic
+        params: {model: claude-sonnet-4-6, api_key_env: ANTHROPIC_ATTACKER_API_KEY}
+      judge:
+        name: strongreject
+        params:
+          grader: {name: openai_compat, params: {model: gpt-4o, base_url: https://api.openai.com/v1, api_key_env: OPENAI_GRADER_API_KEY}}
+datasets:
+  - name: strongreject           # 50-item subset, fetched + sha256-verified, opt-in
+    params: {subset: small, allow_download: true, sha256: "<verified sha256>"}
+judges:
+  - name: strongreject
+    params: {grader: {name: anthropic, params: {model: claude-opus-4-8, api_key_env: ANTHROPIC_GRADER_API_KEY}}}
 ```
 
 ## Outputs

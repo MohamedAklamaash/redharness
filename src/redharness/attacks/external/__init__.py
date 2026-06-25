@@ -17,5 +17,6 @@ rest of the harness (judges, metrics, report) is unchanged.
 """
 
 from redharness.attacks.external.base import ExternalAttack
+from redharness.attacks.external.pair import PairAttack
 
-__all__ = ["ExternalAttack"]
+__all__ = ["ExternalAttack", "PairAttack"]

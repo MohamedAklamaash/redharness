@@ -6,6 +6,7 @@ attacks (and the no-injection baseline) on the ``injections`` axis. Importing th
 ``attacks`` axis — they reuse the single-turn jailbreak runner path.
 """
 
+import redharness.attacks.external  # register the PAIR external attack
 import redharness.attacks.injection
 import redharness.attacks.leakage  # noqa: F401  (register leakage probe attacks)
 from redharness.attacks.static import StaticReplayAttack

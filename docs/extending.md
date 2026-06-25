@@ -71,9 +71,14 @@ targets:
 ```
 
 > Keep targets **deterministic** if you want golden/repeatable numbers — no wall clock, no
-> unseeded randomness. The bundled `openai_compat` target shows how to wrap a live
-> OpenAI-compatible endpoint (reading credentials from env vars), imported lazily so the
-> offline path needs no network.
+> unseeded randomness. The bundled `openai_compat` and `anthropic` targets show how to wrap a
+> live endpoint: they subclass the shared `targets._http.HttpTarget`, which imports `httpx`
+> lazily (so the offline path needs no network or extra), reads the key only from the env var
+> **named** by `api_key_env`, takes a per-instance `base_url`, and applies one shared
+> retry/backoff + typed-error policy (`TargetConfigError` for auth/config,
+> `TargetRuntimeError` for transient/runtime failures). See the **Live evaluation** section
+> of [`configuration.md`](configuration.md) for the `base_url`/`api_key_env` wiring and the
+> `max_queries` budget cap.
 
 ---
 
@@ -125,7 +130,14 @@ attacks:
 
 > Network-heavy attack frameworks (PAIR, TAP, garak, PyRIT) belong under
 > `src/redharness/attacks/external/` behind a dependency extra so the offline core stays
-> lean. Subclass `Attack` there and load the framework lazily inside `run`.
+> lean. Subclass `Attack` there and load the framework lazily inside `run`. The bundled
+> **PAIR** adapter (`attacks/external/pair.py`) shows the **injection pattern**: it takes an
+> already-built attacker `Target` and `Judge` in its constructor rather than building them
+> itself. To wire that from YAML, `runner/build.py::build_attack` pops the nested `attacker`
+> (→ `build_target`) and `judge` (→ `build_judge`) sub-specs and passes the live objects in —
+> exactly mirroring how `build_judge` materialises its `grader`. This keeps the attack
+> reference-injectable and offline-testable, and the original spec (with the nested dicts) is
+> retained for the cache key so changing the attacker model or `max_iters` busts the cache.
 
 ---
 

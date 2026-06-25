@@ -240,12 +240,17 @@ leaderboard. The literature the framework is grounded in is enumerated in
 ## 9. Limitations and current scope
 
 The framework and the offline evaluation paths for all three surfaces are implemented and
-test-locked. Currently scaffolded behind clean interfaces and explicit opt-in (not yet
-wired): live model adapters (OpenAI-compatible endpoints) and bundled real attack/extraction
-corpora (e.g. AgentDojo/InjecAgent attack sets, web-scale divergence prompts). The bundled
+test-locked. A first **live** end-to-end path is now wired behind optional extras and
+environment-only credentials: hardened `openai_compat` and `anthropic` target adapters
+(shared httpx transport, retry/backoff, typed errors), the **PAIR** attack (Chao et al.
+2023) with an injected attacker model and judge, and the **StrongREJECT** forbidden-prompt
+set plus its autograder — see [`configs/real_eval.example.yaml`](configs/real_eval.example.yaml)
+and the "Live evaluation" section of [`docs/configuration.md`](docs/configuration.md). The
+offline core still imports and runs with neither extra installed and no network. The bundled
 content is intentionally synthetic, so absolute numbers from the smoke evaluations are
-illustrative of the *mechanism*, not of any real model's safety. A hosted leaderboard with a
-held-out, gaming-resistant submission verifier, and a technical report, are planned.
+illustrative of the *mechanism*, not of any real model's safety. Still scaffolded: bundled
+real attack/extraction corpora (e.g. AgentDojo/InjecAgent attack sets, web-scale divergence
+prompts) and a hosted, gaming-resistant leaderboard verifier.
 
 ## 10. Responsible use
 
@@ -254,6 +259,20 @@ research. It ships realistic but synthetic refusal-probe behaviors and synthetic
 no operational harmful content, no real PII, no memorized/copyrighted text (and no
 CBRN/explosives content). Real datasets are fetched from their canonical sources and
 verified by hash behind an explicit opt-in. Use it to measure and improve model safety.
+
+**Responsible use — LIVE mode.** Running against real providers (`openai_compat`,
+`anthropic`, the `pair` attack, `strongreject` data) is gated behind optional extras and
+environment-only API keys, and is your responsibility:
+
+- **Authorized use only.** Only red-team models and accounts you are authorized to test. You
+  are responsible for complying with each provider's Terms of Service and acceptable-use
+  policy. Use personal/research keys, not production credentials.
+- **Local harmful outputs.** Live runs may elicit and persist real harmful text to
+  `runs/<run_name>/` (transcripts, cache, reports). Handling, storage, and retention of that
+  content are entirely your responsibility — treat the runs directory as sensitive.
+- **Not reproducible.** Live numbers are single-sample and non-deterministic (provider
+  sampling, model updates, rate limits); they are not comparable across time the way the
+  offline, deterministic smoke results are. Set the `max_queries` budget to cap spend.
 
 ## 11. Getting started
 
