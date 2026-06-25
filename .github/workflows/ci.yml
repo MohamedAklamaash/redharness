@@ -21,9 +21,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install project (dev extras)
-        run: |
-          uv venv
-          uv pip install -e '.[dev]'
+        run: uv pip install -e '.[dev]'
 
       - name: Lint
         run: uv run ruff check
@@ -55,9 +53,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install project (dashboard extra)
-        run: |
-          uv venv
-          uv pip install -e '.[dashboard]'
+        run: uv pip install -e '.[dashboard]'
 
       - name: Ensure the Streamlit app imports
         run: uv run python -c "import redharness.dashboard.app"
