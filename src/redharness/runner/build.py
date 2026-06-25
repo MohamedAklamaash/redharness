@@ -4,7 +4,7 @@ This is the one place that turns YAML names into live objects, so it owns the fe
 wiring quirks — notably that :class:`RubricJudge` needs a grader ``Target``
 injected. The grader is itself a target spec under the judge's ``grader`` param,
 which keeps the offline path deterministic (the smoke config points it at the
-``mock`` target).
+``reference`` target).
 """
 
 from __future__ import annotations

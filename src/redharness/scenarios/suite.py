@@ -59,7 +59,7 @@ class ScenarioSpec(BaseModel):
 
     ``user_plan`` is the benign sequence of tool calls that completes the user
     task; ``attacker_action`` is the single tool call the injection tries to make
-    the agent fire. The offline :class:`MockAgentTarget` follows these
+    the agent fire. The offline :class:`ReferenceAgent` follows these
     deterministically; a real agent would instead derive them from ``user_task``
     and the tool results. ``user_check`` / ``attacker_check`` are the ground-truth
     predicates the judge uses — kept independent of the plan so a partially

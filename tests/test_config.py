@@ -25,19 +25,19 @@ def test_load_valid_shorthand_and_longhand(tmp_path):
             tmp_path,
             """
             run_name: t
-            targets: [mock]
+            targets: [reference]
             attacks: [static]
             datasets: [demo]
             judges:
               - name: rubric
                 params:
-                  grader: {name: mock}
+                  grader: {name: reference}
             metrics: [asr]
             """,
         )
     )
-    assert cfg.targets[0].name == "mock"
-    assert cfg.judges[0].params["grader"] == {"name": "mock"}
+    assert cfg.targets[0].name == "reference"
+    assert cfg.judges[0].params["grader"] == {"name": "reference"}
 
 
 def test_missing_file_raises(tmp_path):
@@ -47,7 +47,7 @@ def test_missing_file_raises(tmp_path):
 
 def test_malformed_yaml_raises(tmp_path):
     with pytest.raises(ConfigError):
-        load_config(_write(tmp_path, "targets: [mock\nthis: : :"))
+        load_config(_write(tmp_path, "targets: [reference\nthis: : :"))
 
 
 def test_non_mapping_root_raises(tmp_path):
@@ -61,7 +61,7 @@ def test_missing_required_axis_raises(tmp_path):
         load_config(
             _write_dict(
                 tmp_path,
-                targets=["mock"],
+                targets=["reference"],
                 attacks=["static"],
                 datasets=["demo"],
                 judges=["refusal_match"],
@@ -90,7 +90,7 @@ def test_run_name_path_traversal_rejected(tmp_path, bad_name):
             _write_dict(
                 tmp_path,
                 run_name=bad_name,
-                targets=["mock"],
+                targets=["reference"],
                 attacks=["static"],
                 datasets=["demo"],
                 judges=["refusal_match"],
@@ -105,7 +105,7 @@ def test_run_name_safe_slug_accepted(tmp_path, good_name):
         _write_dict(
             tmp_path,
             run_name=good_name,
-            targets=["mock"],
+            targets=["reference"],
             attacks=["static"],
             datasets=["demo"],
             judges=["refusal_match"],
@@ -120,7 +120,7 @@ def test_unknown_config_key_raises(tmp_path):
         load_config(
             _write_dict(
                 tmp_path,
-                targets=["mock"],
+                targets=["reference"],
                 attacks=["static"],
                 datasets=["demo"],
                 judges=["refusal_match"],

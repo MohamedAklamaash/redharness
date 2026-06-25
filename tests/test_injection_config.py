@@ -10,7 +10,7 @@ from redharness.config import RunConfig
 def _base(**overrides) -> dict:
     cfg = {
         "run_name": "c",
-        "targets": [{"name": "mock_agent"}],
+        "targets": [{"name": "reference_agent"}],
         "judges": [{"name": "injection_detector"}],
         "metrics": ["injection_success_rate"],
     }

@@ -100,9 +100,9 @@ Stable plugin interfaces live in `redharness.core`; a typed registry resolves pl
 name from declarative YAML configs (closed dict lookup — no dynamic import/`eval`, so a
 config can't execute arbitrary code). The runner executes the matrix deterministically,
 caches attempts keyed on the full resolved parameters, writes JSONL transcripts, and
-renders Markdown/HTML reports plus a `leaderboard.json`. The injection surface adds a mock
-tool environment and a bounded multi-step agent loop; the leakage surface reuses the
-single-turn path with leakage-specific plugins.
+renders Markdown/HTML reports plus a `leaderboard.json`. The injection surface adds a
+simulated tool environment and a bounded multi-step agent loop; the leakage surface reuses
+the single-turn path with leakage-specific plugins.
 
 ### Metrics (all citable)
 
@@ -215,6 +215,6 @@ explicit opt-in; and a technical report.
 ## Responsible use
 
 `redharness` is a defensive evaluation tool for authorized safety testing and research. It
-ships only benign, synthetic placeholder content; it does not bundle real harmful prompts,
-real PII, or real memorized text. Real datasets are fetched-and-verified by hash behind an
-explicit opt-in.
+ships realistic but synthetic refusal-probe behaviors and synthetic secrets — no operational
+harmful content, no real PII, no memorized/copyrighted text (and no CBRN/explosives content).
+Real datasets are fetched-and-verified by hash behind an explicit opt-in.

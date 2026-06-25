@@ -1,6 +1,8 @@
 # redharness
 
-### A standardized, reproducible benchmark for adversarial evaluation of large language models across jailbreak, prompt-injection, and data-leakage threat surfaces
+### A standardized, reproducible benchmark for the adversarial robustness of large language models — jailbreak, prompt-injection, and data-leakage evaluation under one methodology
+
+> *Standardize the evaluation, not just the attack.* In LLM safety, a number you can't reproduce — or whose judge and dataset you can't name — isn't a benchmark. `redharness` makes adversarial safety **comparable**: one harness, three threat surfaces, and a `(dataset_version, judge, metric)` provenance triple on every result.
 
 `redharness` is an open-source evaluation framework for measuring the adversarial
 robustness and safety of large language models (LLMs). It unifies three threat surfaces
@@ -137,10 +139,13 @@ extraction and divergence, canary recovery, PII elicitation, and system-prompt
 exfiltration. Evaluation reports both a binary recovery decision and a continuous
 verbatim-overlap severity score.
 
-All bundled artifacts are synthetic and benign — placeholder behaviors, benign *sentinel*
-attacker goals, and obviously-fake secrets (e.g. `*.example.invalid` PII) — so the harness
-mechanics can be exercised without distributing harmful prompts, real PII, or memorized
-text. Real corpora attach behind explicit, hash-verified opt-in (§9, §11).
+All bundled artifacts are realistic but responsibly synthetic — refusal-probe behaviors
+phrased as user *requests* (the request only, never a harmful answer or operational
+detail), benign *sentinel* attacker goals, and obviously-fake secrets (e.g.
+`*.example.invalid` PII, `555-01xx` phone numbers, `CANARY-…` sentinels) — so the harness
+mechanics can be exercised without distributing operational harmful content, real PII, or
+memorized/copyrighted text. CBRN and explosives content is excluded entirely. Real corpora
+attach behind explicit, hash-verified opt-in (§9, §11).
 
 ## 5. Methodology
 
@@ -245,10 +250,10 @@ held-out, gaming-resistant submission verifier, and a technical report, are plan
 ## 10. Responsible use
 
 `redharness` is a defensive evaluation tool intended for authorized safety testing and
-research. It ships only benign, synthetic placeholder content; it does not distribute real
-harmful prompts, real PII, or real memorized text. Real datasets are fetched from their
-canonical sources and verified by hash behind an explicit opt-in. Use it to measure and
-improve model safety.
+research. It ships realistic but synthetic refusal-probe behaviors and synthetic secrets —
+no operational harmful content, no real PII, no memorized/copyrighted text (and no
+CBRN/explosives content). Real datasets are fetched from their canonical sources and
+verified by hash behind an explicit opt-in. Use it to measure and improve model safety.
 
 ## 11. Getting started
 

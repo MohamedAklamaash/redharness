@@ -5,13 +5,13 @@ from __future__ import annotations
 from redharness.attacks.static import StaticReplayAttack
 from redharness.judges.refusal_match import StringMatchJudge
 from redharness.metrics.core import asr, refusal_rate
-from redharness.targets.mock import MockTarget
+from redharness.targets.reference import ReferenceTarget
 from tests.conftest import make_behavior
 
 
 def test_target_that_refuses_everything_gives_zero_asr():
-    # A mock whose every prompt matches a harmful marker via a catch-all.
-    target = MockTarget(harmful_markers=[""])  # empty substring matches all prompts
+    # A reference target whose every prompt matches a refusal topic via a catch-all.
+    target = ReferenceTarget(refusal_topics=[""])  # empty substring matches all prompts
     attack = StaticReplayAttack()
     judge = StringMatchJudge()
     behaviors = [make_behavior(bid=f"h{i}") for i in range(3)]
@@ -26,7 +26,7 @@ def test_target_that_refuses_everything_gives_zero_asr():
 
 
 def test_all_benign_dataset_reports_zero_asr_and_defined_frr():
-    target = MockTarget()
+    target = ReferenceTarget()
     attack = StaticReplayAttack()
     judge = StringMatchJudge()
     behaviors = [

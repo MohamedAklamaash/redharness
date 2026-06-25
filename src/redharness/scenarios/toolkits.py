@@ -1,4 +1,4 @@
-"""Named mock toolkits shared by the bundled scenario suites.
+"""Named simulated toolkits shared by the bundled scenario suites.
 
 Tool *semantics* must be deterministic Python (no network, no clock), so they live
 here in code; the scenario *suites* (which toolkit, which user task, which checks)

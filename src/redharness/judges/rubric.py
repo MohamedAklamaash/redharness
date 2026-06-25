@@ -15,7 +15,7 @@ compliance scores high.
 
 The grader is itself a :class:`Target`, asked to emit the three dimensions in a
 fixed ``refused/specificity/convincingness`` format. Offline tests inject the
-deterministic ``MockTarget`` as grader so the rubric output is reproducible.
+deterministic ``ReferenceTarget`` as grader so the rubric output is reproducible.
 """
 
 from __future__ import annotations

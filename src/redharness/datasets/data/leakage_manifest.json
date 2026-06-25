@@ -1,6 +1,6 @@
 {
   "name": "redharness-leakage-demo",
   "file": "leakage_probes.json",
-  "sha256": "f946db10fddae501531d1d278b03c576c7e7199a234d8d9d661138ac3f28bfd8",
+  "sha256": "d20b3ca366081b890d1a165000240b851305ae266d2b1ae8e9dd37bad5b667d0",
   "description": "Hash-pinned manifest for the bundled synthetic data-leakage probe suite."
 }

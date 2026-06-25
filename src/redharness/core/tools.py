@@ -1,10 +1,10 @@
-"""Mock tool model and a deterministic tool environment for the injection surface.
+"""Simulated tool model and a deterministic tool environment for the injection surface.
 
 The injection / agentic surface (plan §3, §5 Phase 2) needs a sandbox: a set of
 tools an agent may call and an environment that "executes" them. Every tool here
-is a MOCK with benign, simulated semantics — no network, no real side effects, no
-wall clock — so the offline path is fully deterministic (AgentDojo / InjecAgent
-model the same way; Debenedetti et al. 2024, Zhan et al. 2024).
+is simulated with benign semantics — no network, no real side effects, no wall
+clock — so the offline path is fully deterministic (AgentDojo / InjecAgent model
+the same way; Debenedetti et al. 2024, Zhan et al. 2024).
 
 A tool call's *result content* is the indirect-injection vector: a scenario can
 seed a document or email body with an attacker instruction, and the agent reads
@@ -26,7 +26,7 @@ class Tool(BaseModel):
 
     ``parameters`` is a JSON-schema-ish description of the arguments, matching the
     shape an OpenAI-compatible ``tools=`` payload expects, so the same model drives
-    both the mock and a real tool-calling endpoint.
+    both the reference agent and a real tool-calling endpoint.
     """
 
     name: str
@@ -77,7 +77,7 @@ class ToolResult(BaseModel):
 
 
 class ToolEnvironment:
-    """A deterministic sandbox that executes mock tool calls.
+    """A deterministic sandbox that executes simulated tool calls.
 
     The environment owns a mutable ``state`` dict (e.g. a simulated inbox or
     document store) and a registry of tool implementations. Executing a call

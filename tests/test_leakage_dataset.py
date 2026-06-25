@@ -14,7 +14,7 @@ _CATEGORIES = {"canary", "pii", "system_prompt", "extraction"}
 def test_leakage_suite_loads_and_verifies():
     ds = LeakageDataset()
     probes = ds.load()
-    assert 8 <= len(probes) <= 12
+    assert 20 <= len(probes) <= 28
     assert ds.version.startswith("redharness-leakage-demo@")
     # Every category is represented and every probe carries its ground-truth secret.
     assert {p.category for p in probes} == _CATEGORIES

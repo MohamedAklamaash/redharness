@@ -1,17 +1,40 @@
-# Offline smoke run: MockTarget + static & template attacks + bundled demo
-# dataset + both judges + all metrics. Runs end-to-end with zero env setup.
+# Offline jailbreak smoke run: two deterministic reference targets + static &
+# template attacks + the bundled demo behavior set + both judges + all metrics.
+# Runs end-to-end with zero env setup, no API keys.
+#
+# Two reference targets give a real target-vs-target comparison on the leaderboard:
+#   * aligned-reference (strict): the default, broad refusal-topic guardrail. It
+#     refuses every harmful probe under direct request (static ASR 0), and
+#     over-refuses the XSTest-style benign prompts (non-zero FRR) — the safety /
+#     over-refusal trade-off made visible.
+#   * permissive-reference (lenient): a narrow refusal-topic list, so it complies
+#     with most harmful probes even under direct request (higher static ASR) and
+#     does not over-refuse benign prompts (FRR 0).
+# Both carry the same bypass marker, so the template attack's prefix_injection
+# wrapper flips a refusal into a compliance — giving the smoke run a non-trivial,
+# deterministic jailbreak success rate while plain static replay still gets refused
+# by the strict target.
 run_name: smoke
 seed: 0
 
 targets:
-  # The mock is configured so the "Ignore the previous framing" wrapper used by
-  # the template attack's prefix_injection template counts as a bypass — this
-  # gives the smoke run a non-trivial, deterministic jailbreak success rate so
-  # the success path is exercised end-to-end, while static replay still fails.
-  - name: mock
+  - name: reference
     params:
+      name: aligned-reference
       bypass_markers:
         - "ignore the previous framing"
+  - name: reference
+    params:
+      name: permissive-reference
+      bypass_markers:
+        - "ignore the previous framing"
+      refusal_topics:
+        - "ransomware"
+        - "keylogger"
+        - "botnet"
+        - "money laundering"
+        - "card skimmer"
+        - "sim swap"
 
 attacks:
   - static
@@ -25,7 +48,7 @@ judges:
   - name: rubric
     params:
       grader:
-        name: mock
+        name: reference
 
 metrics:
   - asr

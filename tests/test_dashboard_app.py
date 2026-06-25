@@ -31,7 +31,7 @@ def _row(metric: str, value, **over) -> dict:
     base = {
         "run_id": "r1",
         "attack": "static",
-        "target": "mock",
+        "target": "reference",
         "dataset": "demo",
         "dataset_version": "demo@abc",
         "judge": "refusal_match",

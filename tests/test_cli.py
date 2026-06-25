@@ -20,7 +20,7 @@ def test_list_shows_every_axis():
     assert result.exit_code == 0
     for axis in ("targets", "attacks", "datasets", "judges", "metrics", "injections", "scenarios"):
         assert axis in result.stdout
-    assert "mock" in result.stdout
+    assert "reference" in result.stdout
     assert "indirect_injection" in result.stdout
 
 
@@ -74,7 +74,7 @@ def test_run_smoke_writes_report(tmp_path):
 
 def test_run_malformed_config_exits_nonzero(tmp_path):
     cfg = tmp_path / "bad.yaml"
-    cfg.write_text("targets: [mock\n: : :")
+    cfg.write_text("targets: [reference\n: : :")
     result = runner.invoke(app, ["run", str(cfg), "--runs-dir", str(tmp_path / "runs")])
     assert result.exit_code == 1
 

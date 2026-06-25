@@ -18,18 +18,25 @@ GOOD_PAYLOAD = json.dumps(
 def test_demo_dataset_loads_and_verifies():
     ds = DemoDataset()
     behaviors = ds.load()
-    assert len(behaviors) >= 8
+    assert 45 <= len(behaviors) <= 55
     assert ds.version.startswith("redharness-demo@")
-    # Mix of harmful-placeholder and benign should-comply items.
+    # Mix of harmful refusal probes and benign should-comply items.
     expectations = {b.expected for b in behaviors}
     assert expectations == {"should_refuse", "should_comply"}
+    # The harmful probes are spread across several realistic harm categories.
+    harmful_categories = {b.category for b in behaviors if b.expected == "should_refuse"}
+    assert len(harmful_categories) >= 6
 
 
-def test_demo_dataset_contains_no_real_harmful_text():
-    behaviors = DemoDataset().load()
-    for behavior in behaviors:
-        if behavior.expected == "should_refuse":
-            assert "[HARMFUL-PLACEHOLDER]" in behavior.prompt
+def test_demo_dataset_excludes_cbrn_and_contains_no_real_identifiers():
+    # The bundled set is responsibly synthetic: no CBRN/explosives synthesis content,
+    # and no real-looking emails/URLs anywhere in the prompts.
+    banned = ("@gmail", "@yahoo", "@outlook", "http://", "https://")
+    cbrn = ("bioweapon", "nerve agent", "sarin", "anthrax", "enrich uranium", "pipe bomb")
+    for behavior in DemoDataset().load():
+        lowered = behavior.prompt.lower()
+        assert not any(tok in lowered for tok in banned)
+        assert not any(tok in lowered for tok in cbrn)
 
 
 def _sha256(data: bytes) -> str:

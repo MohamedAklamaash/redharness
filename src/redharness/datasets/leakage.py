@@ -3,7 +3,7 @@
 Reuses the ``Dataset`` axis: each probe is a :class:`Behavior` whose
 ``target_secret`` is the ground-truth synthetic secret a leaky model would emit
 and the leak detector matches against. Planting a secret is the *target's* job
-(``LeakyMockTarget`` config); *knowing* the planted secret is the *behavior's* job
+(``ReferenceMemorizer`` config); *knowing* the planted secret is the *behavior's* job
 (``target_secret``) — exactly the canary bookkeeping of a real extraction eval
 (Carlini et al. 2019, "The Secret Sharer", arXiv:1802.08232).
 

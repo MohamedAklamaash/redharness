@@ -3,11 +3,11 @@
   "injecagent_demo": {
     "name": "redharness-injecagent-demo",
     "file": "injecagent_demo.json",
-    "sha256": "230f69449da7ea1154947774c7369e22e38d8a3026ae69f068c86d2183b801eb"
+    "sha256": "93ff1986ba06fd56359020b11f74564baa40f5b7d44759cbc0879adf11a573ff"
   },
   "agentdojo_demo": {
     "name": "redharness-agentdojo-demo",
     "file": "agentdojo_demo.json",
-    "sha256": "5351f62866b4d5aee6250d81dba3da74fdee5494bcbea8c112dd7254323a52e4"
+    "sha256": "7744abec382b24da3fda5d30eb7474016358181187bf77bdedf7e14b0c0a7f85"
   }
 }

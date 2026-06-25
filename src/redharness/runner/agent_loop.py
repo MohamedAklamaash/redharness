@@ -26,7 +26,7 @@ from redharness.core.models import Attempt, Message, Response
 from redharness.core.scenario import AgentTrace, Injection, InjectionPlacement, Scenario
 from redharness.core.target import Target
 from redharness.core.tools import ToolCall, ToolEnvironment
-from redharness.targets.mock_agent import encode_control
+from redharness.targets.reference_agent import encode_control
 
 DEFAULT_MAX_STEPS = 6
 
@@ -132,7 +132,7 @@ def run_agent_loop(
 
 
 def _record_call(call: ToolCall) -> Message:
-    """The assistant's tool-call turn, serialised so the mock can replay state."""
+    """The assistant's tool-call turn, serialised so the agent can replay state."""
     return Message(
         role="assistant",
         name="tool_call",

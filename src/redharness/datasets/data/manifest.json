@@ -1,6 +1,6 @@
 {
   "name": "redharness-demo",
   "file": "demo_behaviors.json",
-  "sha256": "11f909c5b6175290c78a691f4387a591f084da09110a41d02afe944fd9de8fd1",
+  "sha256": "e2f1f86eee06a02a4aad0b0e2bf6ffab229cab2383c130d9bb177b06435920bc",
   "description": "Hash-pinned manifest for the bundled offline demo dataset."
 }

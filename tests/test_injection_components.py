@@ -15,7 +15,7 @@ from redharness.core.tools import Tool, ToolCall, ToolEnvironment
 from redharness.runner.agent_loop import run_agent_loop
 from redharness.scenarios.loader import BundledSuite
 from redharness.scenarios.suite import ScenarioSpec, SuiteScenario
-from redharness.targets.mock_agent import MockAgentTarget
+from redharness.targets.reference_agent import ReferenceAgent
 
 # --- Tool environment ---------------------------------------------------------
 
@@ -107,7 +107,7 @@ def test_suite_scenario_rejects_unknown_toolkit():
 def test_robust_agent_ignores_injection():
     scenario = SuiteScenario(_spec())
     injection = IndirectInjectionAttack().build_injection(scenario)
-    attempt = run_agent_loop(scenario, MockAgentTarget(susceptibility="robust"), injection, "x")
+    attempt = run_agent_loop(scenario, ReferenceAgent(susceptibility="robust"), injection, "x")
     assert attempt.metadata["attacker_succeeded"] is False
     assert attempt.metadata["user_task_completed"] is True
 
@@ -116,14 +116,14 @@ def test_vulnerable_agent_follows_indirect_injection():
     scenario = SuiteScenario(_spec())
     injection = IndirectInjectionAttack().build_injection(scenario)
     attempt = run_agent_loop(
-        scenario, MockAgentTarget(susceptibility="vulnerable"), injection, "x"
+        scenario, ReferenceAgent(susceptibility="vulnerable"), injection, "x"
     )
     assert attempt.metadata["attacker_succeeded"] is True
 
 
 def test_baseline_run_is_not_marked_injected():
     scenario = SuiteScenario(_spec())
-    attempt = run_agent_loop(scenario, MockAgentTarget(susceptibility="vulnerable"), None, "x")
+    attempt = run_agent_loop(scenario, ReferenceAgent(susceptibility="vulnerable"), None, "x")
     assert attempt.metadata["injected"] is False
     assert attempt.metadata["attacker_succeeded"] is False
 
@@ -135,7 +135,7 @@ def test_agent_loop_terminates_at_max_steps():
     )
     scenario = SuiteScenario(spec)
     attempt = run_agent_loop(
-        scenario, MockAgentTarget(susceptibility="robust"), None, "x", max_steps=2
+        scenario, ReferenceAgent(susceptibility="robust"), None, "x", max_steps=2
     )
     assert attempt.metadata["max_steps_hit"] is True
     assert len(attempt.metadata["steps"]) == 2
@@ -146,7 +146,7 @@ def test_malformed_tool_call_recorded_as_error_not_crash():
     spec = _spec(user_plan=[{"name": "ghost_tool", "arguments": {}}])
     scenario = SuiteScenario(spec)
     attempt = run_agent_loop(
-        scenario, MockAgentTarget(susceptibility="robust"), None, "x", max_steps=3
+        scenario, ReferenceAgent(susceptibility="robust"), None, "x", max_steps=3
     )
     errors = [s for s in attempt.metadata["steps"] if s["error"]]
     assert errors and "unknown tool" in errors[0]["error"]
@@ -154,13 +154,13 @@ def test_malformed_tool_call_recorded_as_error_not_crash():
 
 def test_susceptibility_validation():
     with pytest.raises(ValueError, match="susceptibility must be"):
-        MockAgentTarget(susceptibility="sometimes")
+        ReferenceAgent(susceptibility="sometimes")
 
 
-def test_mock_agent_without_control_answers_benignly():
+def test_reference_agent_without_control_answers_benignly():
     from redharness.core.models import Message
 
-    response = MockAgentTarget().generate([Message(role="user", content="hi")])
+    response = ReferenceAgent().generate([Message(role="user", content="hi")])
     assert response.text == "done"
     assert response.raw["tool_calls"] == []
 
@@ -171,7 +171,7 @@ def test_indirect_injection_on_tool_without_state_is_noop():
     scenario = SuiteScenario(_spec(injection_tool="transfer_funds"))
     injection = IndirectInjectionAttack().build_injection(scenario)
     attempt = run_agent_loop(
-        scenario, MockAgentTarget(susceptibility="vulnerable"), injection, "x"
+        scenario, ReferenceAgent(susceptibility="vulnerable"), injection, "x"
     )
     assert attempt.metadata["attacker_succeeded"] is False
     assert attempt.metadata["user_task_completed"] is True
@@ -185,7 +185,7 @@ def test_indirect_injection_on_unmapped_tool_name_is_noop():
     injection = IndirectInjectionAttack().build_injection(scenario)
     assert injection.target_tool == "raed_documnet"
     attempt = run_agent_loop(
-        scenario, MockAgentTarget(susceptibility="vulnerable"), injection, "x"
+        scenario, ReferenceAgent(susceptibility="vulnerable"), injection, "x"
     )
     assert attempt.metadata["attacker_succeeded"] is False
     assert attempt.metadata["user_task_completed"] is True

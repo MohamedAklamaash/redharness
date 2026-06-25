@@ -57,7 +57,7 @@ def test_duplicate_registration_different_class_raises():
 
 
 def test_builtin_plugins_are_registered():
-    assert "mock" in registry.targets.names()
+    assert "reference" in registry.targets.names()
     assert {"static", "template"} <= set(registry.attacks.names())
     assert "demo" in registry.datasets.names()
     assert {"refusal_match", "rubric"} <= set(registry.judges.names())

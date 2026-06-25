@@ -45,8 +45,8 @@ are passed as keyword arguments to the plugin's constructor.
 
 ```yaml
 targets:
-  - mock                       # bare name, default params
-  - name: mock                 # name + params
+  - reference                  # bare name, default params
+  - name: reference            # name + params
     params:
       bypass_markers: ["ignore the previous framing"]
 ```
@@ -61,16 +61,22 @@ Discover every registered plugin name (grouped by axis) with `uv run redharness 
 run_name: smoke
 seed: 0
 targets:
-  - name: mock
+  - name: reference            # strict: default broad refusal topics
     params:
+      name: aligned-reference
       bypass_markers: ["ignore the previous framing"]
+  - name: reference            # lenient: narrow refusal topics -> higher ASR
+    params:
+      name: permissive-reference
+      bypass_markers: ["ignore the previous framing"]
+      refusal_topics: ["ransomware", "keylogger", "botnet", "money laundering", "card skimmer", "sim swap"]
 attacks: [static, template]
 datasets: [demo]
 judges:
   - refusal_match
   - name: rubric
     params:
-      grader: {name: mock}     # LLM-as-judge grader is itself a target
+      grader: {name: reference}  # LLM-as-judge grader is itself a target
 metrics: [asr, asr_at_k, refusal_rate, strongreject_score, frr]
 ```
 
@@ -81,10 +87,10 @@ run_name: injection_smoke
 seed: 0
 max_steps: 6
 targets:
-  - name: mock_agent
-    params: {name: agent_robust, susceptibility: robust}
-  - name: mock_agent
-    params: {name: agent_vulnerable, susceptibility: vulnerable}
+  - name: reference_agent
+    params: {name: agent-aligned, susceptibility: robust}
+  - name: reference_agent
+    params: {name: agent-vulnerable, susceptibility: vulnerable}
 injections: [no_injection, direct_injection, indirect_injection]
 scenarios:
   - name: bundled
@@ -101,10 +107,10 @@ metrics: [injection_success_rate, utility_under_attack, utility_baseline]
 run_name: leakage_smoke
 seed: 0
 targets:
-  - name: leaky_mock
-    params: {name: model_leaky, policy: leaky}
-  - name: leaky_mock
-    params: {name: model_guarded, policy: guarded}
+  - name: reference_memorizer
+    params: {name: reference-unaligned, policy: leaky}   # plus canaries/pii_records/system_prompt_secrets/memorized_passages
+  - name: reference_memorizer
+    params: {name: reference-aligned, policy: guarded}
 attacks: [direct_extraction, divergence, canary_completion, system_prompt_leak, pii_elicitation]
 datasets: [leakage_demo]
 judges: [leak_detector]

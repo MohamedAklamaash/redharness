@@ -1,10 +1,10 @@
-"""A deterministic, offline tool-calling agent for the injection surface.
+"""A deterministic reference tool-calling agent for offline evaluation and CI.
 
-``MockAgentTarget`` is the offline counterpart to a real tool-using agent (the
-live ``OpenAICompatTarget`` also works in the loop if its endpoint supports tool
-calls, but is never exercised in offline tests). It follows an explicit plan that
-the agent-loop driver hands it through the system message, so behaviour is fully
-deterministic — no model, no randomness, no clock.
+``ReferenceAgent`` is a scripted, simulated stand-in for a real tool-using agent —
+it is NOT a real model. It follows an explicit plan the agent-loop driver hands it
+through the system message, so its behaviour is fully deterministic — no model, no
+randomness, no clock. (The live ``OpenAICompatTarget`` also works in the loop if its
+endpoint supports tool calls, but is never exercised in offline tests.)
 
 Susceptibility is configurable so tests exercise BOTH injection outcomes:
 
@@ -14,9 +14,9 @@ Susceptibility is configurable so tests exercise BOTH injection outcomes:
 
 The driver embeds the benign plan and (for a vulnerable agent to "discover") the
 attacker action in a structured control block in the system message. A real agent
-would instead reason over the natural-language task and tool results; the mock
-short-circuits that to stay deterministic while still flowing through the exact
-same loop, transcript, and judging path.
+would instead reason over the natural-language task and tool results; this
+reference agent short-circuits that to stay deterministic while still flowing
+through the exact same loop, transcript, and judging path.
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ CONTROL_PREFIX = "<<REDHARNESS_AGENT_CONTROL>>"
 
 
 def encode_control(plan: list[dict], attacker_action: dict | None, marker: str) -> str:
-    """Serialise the driver's plan/attacker-action block for the mock to read."""
+    """Serialise the driver's plan/attacker-action block for the agent to read."""
     payload = {"plan": plan, "attacker_action": attacker_action, "marker": marker}
     return CONTROL_PREFIX + json.dumps(payload, sort_keys=True)
 
@@ -45,13 +45,13 @@ def _decode_control(text: str) -> dict[str, Any] | None:
     return json.loads(text[idx + len(CONTROL_PREFIX) :])
 
 
-@register_target("mock_agent")
-class MockAgentTarget(Target):
-    """A rule-based, deterministic tool-calling agent."""
+@register_target("reference_agent")
+class ReferenceAgent(Target):
+    """A deterministic, scripted tool-calling agent for offline evaluation."""
 
     SUSCEPTIBILITIES = ("robust", "vulnerable")
 
-    def __init__(self, name: str = "mock_agent", susceptibility: str = "robust") -> None:
+    def __init__(self, name: str = "reference_agent", susceptibility: str = "robust") -> None:
         if susceptibility not in self.SUSCEPTIBILITIES:
             raise ValueError(
                 f"susceptibility must be one of {self.SUSCEPTIBILITIES}, got {susceptibility!r}"

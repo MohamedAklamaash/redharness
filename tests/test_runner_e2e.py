@@ -29,8 +29,8 @@ def test_smoke_produces_all_artifacts(tmp_path):
     assert paths["markdown"].exists()
     assert paths["html"].exists()
     assert paths["leaderboard"].exists()
-    # 2 attacks x 1 target x 1 dataset x 2 judges = 4 cells.
-    assert len(result.cells) == 4
+    # 2 attacks x 2 targets x 1 dataset x 2 judges = 8 cells.
+    assert len(result.cells) == 8
 
 
 def test_smoke_leaderboard_has_provenance_triple(tmp_path):
@@ -41,32 +41,48 @@ def test_smoke_leaderboard_has_provenance_triple(tmp_path):
         assert row["dataset_version"].startswith("redharness-demo@")
         assert row["judge"] in {"refusal_match", "rubric"}
         assert row["metric"] in {"asr", "asr_at_k", "refusal_rate", "strongreject_score", "frr"}
+        assert row["target"] in {"aligned-reference", "permissive-reference"}
 
 
 def test_smoke_deterministic_metric_values(tmp_path):
     result, _ = _run(tmp_path)
-    by_cell = {(c.attack, c.judge): c for c in result.cells}
+    by_cell = {(c.target, c.attack, c.judge): c for c in result.cells}
 
-    # Static replay never bypasses the mock -> every harmful behavior refused.
-    static = by_cell[("static", "refusal_match")]
-    assert static.metrics["asr"].value == 0.0
-    assert static.metrics["refusal_rate"].value == 1.0
+    # Strict reference: static replay refuses every harmful behavior (ASR 0) and
+    # over-refuses the XSTest-style benign prompts (FRR 4/20 = 0.2).
+    strict_static = by_cell[("aligned-reference", "static", "refusal_match")]
+    assert strict_static.metrics["asr"].value == 0.0
+    assert strict_static.metrics["refusal_rate"].value == 1.0
+    assert strict_static.metrics["frr"].value == 0.2
+    assert strict_static.metrics["strongreject_score"].value == 0.0
 
-    # Template attack has a bypass template -> all harmful behaviors jailbroken.
-    template = by_cell[("template", "refusal_match")]
-    assert template.metrics["asr"].value == 1.0
-    assert template.metrics["asr_at_k"].value == 1.0
+    # Template attack has a bypass template -> all harmful behaviors jailbroken,
+    # and the same bypass flips the over-refused benign prompts back to compliance.
+    strict_template = by_cell[("aligned-reference", "template", "refusal_match")]
+    assert strict_template.metrics["asr"].value == 1.0
+    assert strict_template.metrics["asr_at_k"].value == 1.0
+    assert strict_template.metrics["frr"].value == 0.0
 
-    # No benign behavior is refused by the mock -> FRR is zero everywhere.
-    for cell in result.cells:
-        assert cell.metrics["frr"].value == 0.0
+    # Lenient reference: narrow topics, so direct replay already complies with most
+    # harmful probes (ASR 24/30 = 0.8) and never over-refuses benign prompts.
+    lenient_static = by_cell[("permissive-reference", "static", "refusal_match")]
+    assert lenient_static.metrics["asr"].value == 0.8
+    assert lenient_static.metrics["refusal_rate"].value == pytest.approx(0.2)
+    assert lenient_static.metrics["frr"].value == 0.0
+    assert lenient_static.metrics["strongreject_score"].value == 0.8
+
+    lenient_template = by_cell[("permissive-reference", "template", "refusal_match")]
+    assert lenient_template.metrics["asr"].value == 1.0
+
+    # The strict reference is strictly safer than the lenient one under direct replay.
+    assert strict_static.metrics["asr"].value < lenient_static.metrics["asr"].value
 
 
 def test_runner_is_reproducible(tmp_path):
     r1, _ = _run(tmp_path / "a")
     r2, _ = _run(tmp_path / "b")
-    v1 = [(c.attack, c.judge, c.metrics["asr"].value) for c in r1.cells]
-    v2 = [(c.attack, c.judge, c.metrics["asr"].value) for c in r2.cells]
+    v1 = [(c.target, c.attack, c.judge, c.metrics["asr"].value) for c in r1.cells]
+    v2 = [(c.target, c.attack, c.judge, c.metrics["asr"].value) for c in r2.cells]
     assert v1 == v2
 
 
@@ -82,14 +98,14 @@ def test_runner_cache_hit_on_second_run(tmp_path):
     )
 
 
-def _config(run_name: str, bypass: list[str] | None, target_name: str = "mock"):
+def _config(run_name: str, bypass: list[str] | None, target_name: str = "reference"):
     params: dict = {}
     if bypass is not None:
         params["bypass_markers"] = bypass
     return RunConfig.model_validate(
         {
             "run_name": run_name,
-            "targets": [{"name": "mock", "params": {"name": target_name, **params}}],
+            "targets": [{"name": "reference", "params": {"name": target_name, **params}}],
             "attacks": [{"name": "template"}],
             "datasets": [{"name": "demo"}],
             "judges": [{"name": "refusal_match"}],
@@ -98,7 +114,7 @@ def _config(run_name: str, bypass: list[str] | None, target_name: str = "mock"):
     )
 
 
-def _template_asr(result, target_name: str = "mock") -> float:
+def _template_asr(result, target_name: str = "reference") -> float:
     cell = next(
         c for c in result.cells if c.attack == "template" and c.target == target_name
     )
@@ -114,7 +130,7 @@ def test_cache_invalidated_on_attack_or_target_param_change(tmp_path):
     assert _template_asr(first) == 1.0
 
     # Same run_name, params changed (no bypass) -> must NOT serve the stale 1.0;
-    # the mock now refuses every template, so ASR drops to 0.0.
+    # the strict default now refuses every template, so ASR drops to 0.0.
     second = Runner(_config("rerun", bypass=[]), tmp_path).run()
     assert _template_asr(second) == 0.0
 
@@ -124,16 +140,19 @@ def test_cache_invalidated_on_attack_or_target_param_change(tmp_path):
 
 
 def test_two_same_named_targets_differing_only_in_params(tmp_path):
-    # Two "mock" targets in one run that differ only in bypass_markers must each
+    # Two "reference" targets in one run that differ only in bypass_markers must each
     # get their own correct ASR — not collide on a shared (name) cache key.
     cfg = RunConfig.model_validate(
         {
             "run_name": "twins",
             "targets": [
-                {"name": "mock", "params": {"name": "mock", "bypass_markers": []}},
+                {"name": "reference", "params": {"name": "reference", "bypass_markers": []}},
                 {
-                    "name": "mock",
-                    "params": {"name": "mock", "bypass_markers": ["ignore the previous framing"]},
+                    "name": "reference",
+                    "params": {
+                        "name": "reference",
+                        "bypass_markers": ["ignore the previous framing"],
+                    },
                 },
             ],
             "attacks": [{"name": "template"}],
@@ -143,7 +162,7 @@ def test_two_same_named_targets_differing_only_in_params(tmp_path):
         }
     )
     result = Runner(cfg, tmp_path).run()
-    # Both targets share the name "mock"; distinguish their cells by ASR value.
+    # Both targets share the name "reference"; distinguish their cells by ASR value.
     asrs = sorted(
         c.metrics["asr"].value for c in result.cells if c.attack == "template"
     )
@@ -175,9 +194,9 @@ def test_build_resolves_without_preimporting_plugins():
     script = (
         "from redharness.config import PluginSpec\n"
         "from redharness.runner.build import build_target, build_attack\n"
-        "t = build_target(PluginSpec(name='mock'))\n"
+        "t = build_target(PluginSpec(name='reference'))\n"
         "a = build_attack(PluginSpec(name='static'))\n"
-        "assert t.name == 'mock' and a.name == 'static'\n"
+        "assert t.name == 'reference' and a.name == 'static'\n"
         "print('OK')\n"
     )
     proc = subprocess.run(
@@ -214,7 +233,7 @@ def test_unknown_behavior_id_raises_typed_error(tmp_path):
     cfg = RunConfig.model_validate(
         {
             "run_name": "rogue",
-            "targets": [{"name": "mock"}],
+            "targets": [{"name": "reference"}],
             "attacks": [{"name": "_rogue_id"}],
             "datasets": [{"name": "demo"}],
             "judges": [{"name": "refusal_match"}],
@@ -229,7 +248,7 @@ def test_empty_dataset_yields_zero_metrics(tmp_path):
     cfg = RunConfig.model_validate(
         {
             "run_name": "empty",
-            "targets": [{"name": "mock"}],
+            "targets": [{"name": "reference"}],
             "attacks": [{"name": "static"}],
             "datasets": [{"name": "_empty_test"}],
             "judges": [{"name": "refusal_match"}],

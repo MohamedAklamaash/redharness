@@ -35,18 +35,18 @@ def test_injection_smoke_deterministic_outcomes(tmp_path):
     by_cell = {(c.target, c.attack, c.dataset): c for c in result.cells}
 
     for suite in ("injecagent_demo", "agentdojo_demo"):
-        robust_direct = by_cell[("agent_robust", "direct_injection", suite)]
+        robust_direct = by_cell[("agent-aligned", "direct_injection", suite)]
         assert robust_direct.metrics["injection_success_rate"].value == 0.0
         assert robust_direct.metrics["utility_under_attack"].value == 1.0
 
-        robust_indirect = by_cell[("agent_robust", "indirect_injection", suite)]
+        robust_indirect = by_cell[("agent-aligned", "indirect_injection", suite)]
         assert robust_indirect.metrics["injection_success_rate"].value == 0.0
         assert robust_indirect.metrics["utility_under_attack"].value == 1.0
 
-        vuln_direct = by_cell[("agent_vulnerable", "direct_injection", suite)]
+        vuln_direct = by_cell[("agent-vulnerable", "direct_injection", suite)]
         assert vuln_direct.metrics["injection_success_rate"].value == 1.0
 
-        vuln_indirect = by_cell[("agent_vulnerable", "indirect_injection", suite)]
+        vuln_indirect = by_cell[("agent-vulnerable", "indirect_injection", suite)]
         assert vuln_indirect.metrics["injection_success_rate"].value == 1.0
 
         # utility_baseline is N/A (None) on injected cells — no baseline subset there.
@@ -55,7 +55,7 @@ def test_injection_smoke_deterministic_outcomes(tmp_path):
 
         # The no-injection control: utility_baseline is 1, ISR is 0 for both agents,
         # and utility_under_attack is N/A (None) — no injected subset on this cell.
-        for target in ("agent_robust", "agent_vulnerable"):
+        for target in ("agent-aligned", "agent-vulnerable"):
             base = by_cell[(target, "no_injection", suite)]
             assert base.metrics["utility_baseline"].value == 1.0
             assert base.metrics["injection_success_rate"].value == 0.0
@@ -126,7 +126,7 @@ def test_injection_cache_hit_on_second_run(tmp_path):
     result = Runner(cfg, tmp_path).run()
     vuln = next(
         c for c in result.cells
-        if c.target == "agent_vulnerable" and c.attack == "indirect_injection"
+        if c.target == "agent-vulnerable" and c.attack == "indirect_injection"
     )
     assert vuln.metrics["injection_success_rate"].value == 1.0
 
@@ -191,7 +191,7 @@ def _max_steps_config(run_name: str, suite_name: str, max_steps: int) -> RunConf
         {
             "run_name": run_name,
             "max_steps": max_steps,
-            "targets": [{"name": "mock_agent", "params": {"susceptibility": "robust"}}],
+            "targets": [{"name": "reference_agent", "params": {"susceptibility": "robust"}}],
             "injections": [{"name": "no_injection"}],
             "scenarios": [{"name": suite_name}],
             "judges": [{"name": "injection_detector"}],
@@ -239,7 +239,7 @@ def test_empty_scenario_suite_yields_sane_metrics(tmp_path):
     cfg = RunConfig.model_validate(
         {
             "run_name": "inj-empty",
-            "targets": [{"name": "mock_agent", "params": {"susceptibility": "robust"}}],
+            "targets": [{"name": "reference_agent", "params": {"susceptibility": "robust"}}],
             "injections": [{"name": "direct_injection"}],
             "scenarios": [{"name": "_empty_suite"}],
             "judges": [{"name": "injection_detector"}],

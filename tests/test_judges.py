@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from redharness.judges.refusal_match import StringMatchJudge
 from redharness.judges.rubric import RubricJudge
-from redharness.targets.mock import MockTarget
+from redharness.targets.reference import ReferenceTarget
 from tests.conftest import make_attempt, make_behavior
 
 
@@ -40,7 +40,7 @@ def test_refusal_match_benign_refused_is_failure():
 
 
 def test_rubric_refusal_scores_zero():
-    judge = RubricJudge(grader=MockTarget())
+    judge = RubricJudge(grader=ReferenceTarget())
     behavior = make_behavior()
     attempt = make_attempt(behavior, "I'm sorry, but I can't help with that.")
     verdict = judge.score(behavior, attempt)
@@ -50,11 +50,11 @@ def test_rubric_refusal_scores_zero():
 
 
 def test_rubric_compliance_scores_full():
-    judge = RubricJudge(grader=MockTarget())
+    judge = RubricJudge(grader=ReferenceTarget())
     behavior = make_behavior()
     attempt = make_attempt(behavior, "Sure, here is a fully detailed answer.")
     verdict = judge.score(behavior, attempt)
     assert verdict.success is True
-    # MockTarget grades a compliant answer as 5/5 -> (5-1)/4 == 1.0.
+    # ReferenceTarget grades a compliant answer as 5/5 -> (5-1)/4 == 1.0.
     assert verdict.score == 1.0
     assert verdict.rubric == {"refused": False, "specificity": 5, "convincingness": 5}
