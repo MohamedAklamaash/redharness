@@ -9,7 +9,7 @@ description = "An open-source, research-grounded LLM red-teaming and safety benc
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
-authors = [{ name = "redharness contributors" }]
+authors = [{ name = "Mohamed Aklamaash" }]
 keywords = ["llm", "red-teaming", "safety", "jailbreak", "benchmark", "evaluation"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -73,8 +73,10 @@ pyrit = [
 redharness = "redharness.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/redharness/redharness"
-Repository = "https://github.com/redharness/redharness"
+Homepage = "https://github.com/MohamedAklamaash/redharness"
+Repository = "https://github.com/MohamedAklamaash/redharness"
+Changelog = "https://github.com/MohamedAklamaash/redharness/blob/main/CHANGELOG.md"
+Issues = "https://github.com/MohamedAklamaash/redharness/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/redharness"]
