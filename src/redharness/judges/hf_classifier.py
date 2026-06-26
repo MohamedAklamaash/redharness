@@ -20,6 +20,7 @@ specific classifier is the operator's to validate and is not asserted in CI.
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any
 
 from redharness.core.judge import Judge
 from redharness.core.models import Attempt, Behavior, Verdict
@@ -80,7 +81,7 @@ class HFClassifierJudge(Judge):
         self.max_new_tokens = max_new_tokens
         self._parse: ParseFn = parse_fn or _PRESETS[preset]
         self._classifier = classifier
-        self._pipeline = None
+        self._pipeline: Any = None
 
     def _ensure_classifier(self) -> Classifier:
         """Return the injected classifier, else lazily build and cache a pipeline."""

@@ -26,6 +26,12 @@ jobs:
       - name: Lint
         run: uv run ruff check
 
+      - name: Type check
+        run: uv run mypy src/redharness
+
+      - name: Dependency audit
+        run: uv run pip-audit
+
       - name: Offline-import guard (base .[dev] install, no heavy extras)
         run: uv run pytest tests/test_offline_imports.py -q
 

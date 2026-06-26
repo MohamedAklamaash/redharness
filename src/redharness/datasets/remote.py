@@ -68,7 +68,7 @@ def _assert_public_host(host: str) -> None:
     except socket.gaierror as exc:
         raise DatasetError(f"could not resolve host {host!r}: {exc}") from exc
     for info in infos:
-        ip = info[4][0]
+        ip = str(info[4][0])
         if _is_blocked_address(ip):
             raise DatasetError(
                 f"refusing to fetch from host {host!r}: resolves to non-public "

@@ -17,7 +17,7 @@ import random
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import TypeVar
+from typing import Any, TypeVar, cast
 
 from redharness.config import RunConfig
 from redharness.core.attack import Attack
@@ -388,7 +388,7 @@ def _wrap_grader(judge: Judge, budget: QueryBudget) -> None:
     """Wrap a judge's grader Target so its real provider calls charge the budget."""
     grader = getattr(judge, "grader", None)
     if isinstance(grader, Target) and not isinstance(grader, BudgetedTarget):
-        judge.grader = BudgetedTarget(grader, budget)
+        cast(Any, judge).grader = BudgetedTarget(grader, budget)
 
 
 def _wrap_attack_providers(attack: Attack, budget: QueryBudget) -> None:
@@ -400,7 +400,7 @@ def _wrap_attack_providers(attack: Attack, budget: QueryBudget) -> None:
     """
     attacker = getattr(attack, "attacker", None)
     if isinstance(attacker, Target) and not isinstance(attacker, BudgetedTarget):
-        attack.attacker = BudgetedTarget(attacker, budget)
+        cast(Any, attack).attacker = BudgetedTarget(attacker, budget)
     judge = getattr(attack, "judge", None)
     if isinstance(judge, Judge):
         _wrap_grader(judge, budget)

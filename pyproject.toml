@@ -31,6 +31,8 @@ dev = [
     "pytest>=8",
     "pytest-cov>=5",
     "ruff>=0.6",
+    "mypy>=1.11",
+    "pip-audit>=2.7",
     # httpx lets the offline test suite drive the live adapters through
     # httpx.MockTransport (no network) so they are covered, not just omitted.
     "httpx>=0.27",
@@ -76,11 +78,13 @@ Repository = "https://github.com/redharness/redharness"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/redharness"]
-# Non-.py package data (bundled dataset + HTML report template) ships in the wheel.
+# Non-.py package data (bundled dataset + HTML report template) plus the PEP 561
+# py.typed marker ship in the wheel.
 artifacts = [
     "src/redharness/datasets/data/*.json",
     "src/redharness/scenarios/data/*.json",
     "src/redharness/report/templates/*.j2",
+    "src/redharness/py.typed",
 ]
 
 [tool.pytest.ini_options]
@@ -106,3 +110,11 @@ ignore = ["B008"]
 "tests/*" = ["B011"]
 # The Markdown report intentionally uses the × multiplication sign for readability.
 "src/redharness/report/render.py" = ["RUF001"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src/redharness"]
+ignore_missing_imports = true
+check_untyped_defs = true
+warn_unused_ignores = true
+no_implicit_optional = true

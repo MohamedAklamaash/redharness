@@ -132,10 +132,7 @@ class BudgetedTarget(Target):
     def __init__(self, inner: Target, budget: QueryBudget) -> None:
         self._inner = inner
         self._budget = budget
-
-    @property
-    def name(self) -> str:
-        return self._inner.name
+        self.name = inner.name
 
     def generate(
         self, messages: list[Message], tools: list[dict] | None = None

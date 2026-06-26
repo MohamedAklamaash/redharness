@@ -9,36 +9,49 @@ the string names that appear in YAML run configs.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar
 
 from redharness.errors import RegistryError
+
+if TYPE_CHECKING:
+    from redharness.core.metric import Metric
 
 T = TypeVar("T")
 
 
+def _label(value: object) -> str:
+    """Best-effort display name for a registered value (class or instance)."""
+    return getattr(value, "__name__", repr(value))
+
+
 class Registry(Generic[T]):
-    """Maps plugin names to classes for a single axis."""
+    """Maps plugin names to registered values for a single axis.
+
+    The value is a class for most axes (resolved to an instance by the builder)
+    and a ready-made instance for the metric axis, so the registry is generic over
+    the stored value type rather than assuming ``type[T]``.
+    """
 
     def __init__(self, axis: str) -> None:
         self.axis = axis
-        self._entries: dict[str, type[T]] = {}
+        self._entries: dict[str, T] = {}
 
-    def register(self, name: str) -> Callable[[type[T]], type[T]]:
-        """Decorator that registers ``cls`` under ``name`` for this axis."""
+    def register(self, name: str) -> Callable[[T], T]:
+        """Decorator that registers ``value`` under ``name`` for this axis."""
 
-        def decorator(cls: type[T]) -> type[T]:
+        def decorator(value: T) -> T:
             existing = self._entries.get(name)
-            if existing is not None and existing is not cls:
+            if existing is not None and existing is not value:
                 raise RegistryError(
                     f"{self.axis} plugin {name!r} is already registered to "
-                    f"{existing.__name__}; cannot rebind to {cls.__name__}"
+                    f"{_label(existing)}; cannot rebind to {_label(value)}"
                 )
-            self._entries[name] = cls
-            return cls
+            self._entries[name] = value
+            return value
 
         return decorator
 
-    def get(self, name: str) -> type[T]:
+    def get(self, name: str) -> T:
         try:
             return self._entries[name]
         except KeyError:
@@ -59,7 +72,7 @@ class _Registries:
         self.attacks: Registry = Registry("attack")
         self.datasets: Registry = Registry("dataset")
         self.judges: Registry = Registry("judge")
-        self.metrics: Registry = Registry("metric")
+        self.metrics: Registry[Metric] = Registry("metric")
         # The injection/agentic surface (Phase 2): injection attacks and scenario
         # suites are their own axes, kept separate so a jailbreak ``attack`` and an
         # ``injection`` of the same name never clash.

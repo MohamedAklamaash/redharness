@@ -22,6 +22,7 @@ from __future__ import annotations
 import csv
 import io
 from collections.abc import Callable
+from typing import Literal
 
 from redharness.core.models import Behavior
 from redharness.core.registry import register_dataset
@@ -38,7 +39,8 @@ _PLACEHOLDER_SHA256 = "0" * 64
 #: fabricated SHA by accident.
 _PLACEHOLDER_COMMIT = "REPLACE_WITH_VERIFIED_COMMIT_SHA"
 
-Label = Callable[[dict[str, str]], str] | str
+Expected = Literal["should_refuse", "should_comply"]
+Label = Callable[[dict[str, str]], Expected] | Expected
 
 
 def _behaviors_from_csv(
@@ -209,7 +211,7 @@ class JBBBehaviorsDataset(_BenchmarkDataset):
         )
 
 
-def _xstest_label(row: dict[str, str]) -> str:
+def _xstest_label(row: dict[str, str]) -> Expected:
     """XSTest ``contrast_*`` types are the unsafe split; the rest are benign."""
     kind = (row.get("type") or "").strip().lower()
     return "should_refuse" if kind.startswith("contrast") else "should_comply"

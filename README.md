@@ -1,5 +1,10 @@
 # redharness
 
+[![CI](https://github.com/MohamedAklamaash/redharness/actions/workflows/ci.yml/badge.svg)](https://github.com/MohamedAklamaash/redharness/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](pyproject.toml)
+[![Typed](https://img.shields.io/badge/typed-mypy-blue.svg)](pyproject.toml)
+
 ### A standardized, reproducible benchmark for the adversarial robustness of large language models — jailbreak, prompt-injection, and data-leakage evaluation under one methodology
 
 > *Standardize the evaluation, not just the attack.* In LLM safety, a number you can't reproduce — or whose judge and dataset you can't name — isn't a benchmark. `redharness` makes adversarial safety **comparable**: one harness, three threat surfaces, and a `(dataset_version, judge, metric)` provenance triple on every result.

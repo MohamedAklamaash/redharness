@@ -42,7 +42,9 @@ _TOOL_STATE_KEY = {
 def _plant_indirect(env: ToolEnvironment, tool: str, instruction: str) -> None:
     """Append ``instruction`` to every value the named tool would return."""
     key = _TOOL_STATE_KEY.get(tool)
-    store = env.state.get(key) if key else None
+    if key is None:
+        return
+    store = env.state.get(key)
     if not isinstance(store, dict):
         return
     env.state[key] = {

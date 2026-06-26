@@ -151,13 +151,14 @@ class HttpTarget(Target):
         self.timeout = timeout
         self.max_retries = max_retries
         self._transport = transport
-        self._api_key = os.environ.get(api_key_env)
-        if not self._api_key:
+        api_key = os.environ.get(api_key_env)
+        if not api_key:
             raise TargetConfigError(
                 f"{type(self).__name__} requires an API key in env var "
                 f"{api_key_env!r}; credentials are read only from the environment, "
                 "never from config"
             )
+        self._api_key: str = api_key
         self._client = None
 
     def _client_for(self, httpx):
