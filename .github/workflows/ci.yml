@@ -26,6 +26,9 @@ jobs:
       - name: Lint
         run: uv run ruff check
 
+      - name: Offline-import guard (base .[dev] install, no heavy extras)
+        run: uv run pytest tests/test_offline_imports.py -q
+
       - name: Test
         run: uv run pytest --cov=redharness --cov-report=term-missing
 

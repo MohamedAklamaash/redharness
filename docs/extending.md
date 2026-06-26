@@ -139,6 +139,34 @@ attacks:
 > reference-injectable and offline-testable, and the original spec (with the nested dicts) is
 > retained for the cache key so changing the attacker model or `max_iters` busts the cache.
 
+> **Implemented vs. scaffold.** PAIR, TAP, and Crescendo are *implemented* adapters:
+> pure-Python orchestration over the injected `attacker`/`judge`, fully offline-testable.
+> GCG, garak, and PyRIT are *scaffolds*: registered seams whose heavy dependency
+> (`torch`/`garak`/`pyrit`) is unverified in CI. A scaffold subclasses `ScaffoldAttack`
+> and only declares `name`, `extra`, and `import_name`:
+>
+> ```python
+> @register_attack("gcg")
+> class GCGAttack(ScaffoldAttack):
+>     name = "gcg"
+>     extra = "gcg"        # pip extra; pyproject: gcg = ["torch"]
+>     import_name = "torch"  # probed lazily inside run()
+> ```
+>
+> `ScaffoldAttack.run` lazily imports `import_name` and raises a typed
+> `ExternalAttackUnavailable` naming the extra (and noting it is unverified in CI) — it
+> never produces a bogus `Attempt`. To promote a scaffold, replace `run` with a real,
+> tested translation of the framework's output into `Attempt`s.
+
+> **Lazy-import rule (non-negotiable).** `src/redharness/plugins.py` eagerly imports
+> every plugin submodule at core load, so a module-level `import torch` anywhere would
+> break `import redharness` for everyone and bloat the dependency-free offline core.
+> Heavy deps are therefore imported **lazily inside a method body** (mirror
+> `targets/_http.py::load_httpx`), behind an optional extra, with a typed error when the
+> extra is missing. The `tests/test_offline_imports.py` tripwire fails CI if any of
+> `{torch, transformers, boto3, vllm, garak, pyrit}` ever lands in `sys.modules` after
+> `import redharness.plugins`.
+
 ---
 
 ## 3. A custom Dataset

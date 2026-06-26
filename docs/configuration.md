@@ -180,6 +180,82 @@ judges:
     params: {grader: {name: anthropic, params: {model: claude-opus-4-8, api_key_env: ANTHROPIC_GRADER_API_KEY}}}
 ```
 
+## Public benchmark datasets
+
+Beyond the bundled `demo`/`leakage_demo` sets and `strongreject`, five public
+red-teaming sets plug in as fetch-by-reference loaders. **No prompts are committed**:
+each is fetched from a commit-pinned URL, sha256-verified, and gated behind
+`allow_download: true`. Pass the verified `sha256` (the committed default is a
+placeholder that fails closed). Forbidden-prompt sets map to `should_refuse`; the
+over-refusal sets map benign prompts to `should_comply` so the false-refusal-rate
+(`frr`) metric is exercised.
+
+| Dataset name | Source | Maps to | Use |
+|---|---|---|---|
+| `advbench` | llm-attacks/llm-attacks | `should_refuse` | harmful behaviors (ASR) |
+| `harmbench` | centerforaisafety/HarmBench | `should_refuse` | standard behaviors (ASR) |
+| `jbb_behaviors` | JailbreakBench/jailbreakbench | `should_refuse` | JBB harmful set (ASR) |
+| `xstest` | paul-rottger/xstest | `should_comply` (safe split) / `should_refuse` (contrast) | exaggerated safety (FRR) |
+| `or_bench` | OR-Bench | `should_comply` | over-refusal (FRR) |
+
+```yaml
+datasets:
+  - name: advbench
+    params: {allow_download: true, limit: 50, sha256: "<verified sha256>"}
+  - name: xstest
+    params: {allow_download: true, sha256: "<verified sha256>"}
+```
+
+See `CONTRIBUTING.md` for the per-dataset source-URL / license / fetch-not-redistribute
+table.
+
+## Cost & token-usage metrics
+
+Two metrics report what a **live** run consumed, read from the per-behavior token
+totals the runner stamps at its single budget choke point:
+
+| Metric | Reports |
+|---|---|
+| `token_usage` | total input + output tokens across behaviors (with a breakdown). |
+| `cost` | estimated USD from a small, dated price table (`metrics/cost.py`), matched by model id. |
+
+Both group **by behavior** (counted once, like ASR), ignore failed/retried calls that
+carry no `usage`, and never double-count cache hits. Both return **N/A** (`—` /
+`null`) for offline/reference runs (no provider was queried) — and `cost` is also N/A
+when no behavior's model is in the price table, so a local-model run reports `—`
+rather than a misleading `$0`. Tokens are the primary signal; dollars are an estimate
+only — verify against your provider's current pricing.
+
+```yaml
+metrics: [asr, refusal_rate, token_usage, cost]
+```
+
+## Tool calling (live targets)
+
+The `openai_compat` and `anthropic` targets serialize a `tools=` argument into the
+provider request and parse the provider's native tool-call shape (OpenAI
+`message.tool_calls[].function`, Anthropic `tool_use` content blocks) back into the
+normalized `[{name, arguments, call_id}]` list the injection agent loop consumes. No
+config is needed — wiring a live target into an injection-mode run now exercises real
+tool calls instead of silently ignoring the tool schema.
+
+## Local servers (Ollama / vLLM)
+
+A self-hosted OpenAI-compatible server is just the `openai_compat` target pointed at a
+loopback `base_url` (already permitted without TLS) — there is no separate adapter:
+
+```yaml
+targets:
+  - name: openai_compat            # Ollama:  ollama serve  (OpenAI API at :11434/v1)
+    params: {model: llama3.1, base_url: http://localhost:11434/v1, api_key_env: OLLAMA_API_KEY}
+  - name: openai_compat            # vLLM:    vllm serve <model>  (OpenAI API at :8000/v1)
+    params: {model: mistralai/Mistral-7B-Instruct-v0.3, base_url: http://localhost:8000/v1, api_key_env: VLLM_API_KEY}
+```
+
+Most local servers ignore the key, but the adapter still reads a (possibly dummy)
+value from `api_key_env`. A complete template is in
+[`configs/local_servers.example.yaml`](../configs/local_servers.example.yaml).
+
 ## Outputs
 
 Each run writes to `runs/<run_name>/`:

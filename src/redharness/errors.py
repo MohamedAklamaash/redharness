@@ -44,6 +44,16 @@ class RunBudgetExceeded(RedharnessError):
     """
 
 
+class ExternalAttackUnavailable(RedharnessError):
+    """Raised when an external-attack scaffold is invoked without its heavy extra.
+
+    The GCG/garak/PyRIT adapters are registered seams whose heavy dependency is
+    imported lazily inside :meth:`run`; a missing install (or the fact that the
+    scaffold is unverified in CI) is surfaced as this typed error naming the extra,
+    never a bare ``ImportError`` deep in a call stack.
+    """
+
+
 class DatasetError(RedharnessError):
     """Raised when a dataset cannot be loaded or fails hash verification."""
 

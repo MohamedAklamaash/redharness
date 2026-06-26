@@ -169,11 +169,13 @@ class Runner:
                 scenario.name, scenario.user_task,
             )
             if cached is None:
+                before = self.budget.usage.snapshot()
                 payload = injection.build_injection(scenario)
                 attempt = run_agent_loop(
                     scenario, budgeted, payload, injection.name, self.config.max_steps
                 )
                 cached = [attempt]
+                _stamp_usage(self.budget, before, cached)
                 self.cache.put(
                     target.name, target_hash, injection.name, injection_hash,
                     scenario.name, scenario.user_task, cached,
@@ -215,6 +217,7 @@ class Runner:
                 behavior.id, behavior.prompt,
             )
             if cached is None:
+                before = self.budget.usage.snapshot()
                 try:
                     cached = attack.run(behavior, budgeted)
                 except RunBudgetExceeded:
@@ -228,6 +231,7 @@ class Runner:
                 except Exception as exc:  # defensive catch-all, sanitized + truncated
                     cached = [_errored_attempt(behavior, attack.name, target.name, exc)]
                 else:
+                    _stamp_usage(self.budget, before, cached)
                     self.cache.put(
                         target.name, target_hash, attack.name, attack_hash,
                         behavior.id, behavior.prompt, cached,
@@ -322,6 +326,27 @@ def _errored_attempt(
         query_count=0,
         metadata={"errored": True, "error": _safe_error(exc)},
     )
+
+
+def _stamp_usage(budget: QueryBudget, before: tuple[int, int, int], attempts) -> None:
+    """Stamp the per-behavior token-usage delta into each freshly produced attempt.
+
+    The delta is read from the run-wide :class:`UsageTally` snapshotted before the
+    behavior ran, so it folds in every provider the attack touched (target, and for
+    PAIR/TAP/Crescendo the attacker + in-loop judge). It is written only on a cache
+    *miss* (so a cache hit never re-charges) and only when at least one usage-bearing
+    call occurred (offline/reference runs leave the attempts unstamped → the
+    token_usage/cost metrics report N/A). Multiple attempts for one behavior carry
+    the same per-behavior total; the metrics group by behavior so it is counted once.
+    """
+    di = budget.usage.input_tokens - before[0]
+    do = budget.usage.output_tokens - before[1]
+    dc = budget.usage.calls - before[2]
+    if dc <= 0:
+        return
+    usage = {"input_tokens": di, "output_tokens": do}
+    for attempt in attempts:
+        attempt.metadata["usage"] = dict(usage)
 
 
 def _wrap_grader(judge: Judge, budget: QueryBudget) -> None:

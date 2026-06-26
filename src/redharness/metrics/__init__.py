@@ -7,6 +7,7 @@ from redharness.metrics.core import (
     refusal_rate,
     strongreject_score,
 )
+from redharness.metrics.cost import cost, token_usage
 from redharness.metrics.injection import (
     injection_success_rate,
     utility_baseline,
@@ -24,6 +25,7 @@ __all__ = [
     "asr",
     "asr_at_k",
     "canary_exposure_rate",
+    "cost",
     "extraction_rate",
     "frr",
     "injection_success_rate",
@@ -31,6 +33,7 @@ __all__ = [
     "refusal_rate",
     "strongreject_score",
     "system_prompt_leak_rate",
+    "token_usage",
     "utility_baseline",
     "utility_under_attack",
     "verbatim_overlap",

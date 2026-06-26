@@ -1,0 +1,61 @@
+# =============================================================================
+# LOCAL example config — NOT run by CI. Drives a self-hosted OpenAI-compatible
+# server (Ollama or vLLM) over loopback http://. No new adapter: both are just
+# the `openai_compat` target pointed at a localhost base_url.
+# =============================================================================
+# There is nothing special to install on the redharness side beyond the `openai`
+# extra (httpx). Loopback http:// is already permitted by the base_url guard, so
+# no API key needs to leave your machine; most local servers ignore the key, but
+# the adapter still reads a (possibly dummy) value from `api_key_env`.
+#
+#   Ollama:  ollama serve            # serves the OpenAI API at :11434/v1
+#            ollama pull llama3.1
+#            export OLLAMA_API_KEY=ollama          # any non-empty value
+#   vLLM:    vllm serve <model> ...   # serves the OpenAI API at :8000/v1
+#            export VLLM_API_KEY=local              # match --api-key if you set one
+#
+# Then:  pip install 'redharness[openai]' && redharness run configs/local_servers.example.yaml
+#
+# This config also turns on the token_usage / cost metrics: local servers report
+# OpenAI-style `usage`, so token totals appear; `cost` stays N/A (—) for models
+# absent from the dated price table (see metrics/cost.py).
+
+run_name: local-servers-example
+seed: 0
+max_queries: 200
+
+targets:
+  # Ollama's OpenAI-compatible endpoint over loopback http:// (no TLS needed).
+  - name: openai_compat
+    params:
+      name: ollama-llama3
+      model: llama3.1
+      base_url: http://localhost:11434/v1
+      api_key_env: OLLAMA_API_KEY
+  # A vLLM OpenAI-compatible server over loopback http://.
+  - name: openai_compat
+    params:
+      name: vllm-mistral
+      model: mistralai/Mistral-7B-Instruct-v0.3
+      base_url: http://localhost:8000/v1
+      api_key_env: VLLM_API_KEY
+
+attacks: [static, template]
+
+datasets:
+  # A public forbidden-prompt set, fetched + sha256-verified, opt-in. No harmful
+  # text is committed; pin the verified hash of the file you intend to use.
+  - name: advbench
+    params:
+      allow_download: true
+      limit: 50
+      sha256: "<paste the verified sha256 of harmful_behaviors.csv here>"
+
+judges:
+  - refusal_match
+
+metrics:
+  - asr
+  - refusal_rate
+  - token_usage   # input/output token totals (local servers report usage)
+  - cost          # N/A unless the local model id is in the dated price table

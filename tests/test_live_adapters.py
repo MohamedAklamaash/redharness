@@ -63,6 +63,9 @@ def test_openai_happy_path_parses_content_and_usage(monkeypatch):
     resp = _openai(monkeypatch, handler).generate([Message(role="user", content="hi")])
     assert resp.text == "Sure, here is the answer."
     assert resp.raw["usage"] == {"prompt_tokens": 7, "completion_tokens": 3}
+    # prompt/completion_tokens are normalized to input/output_tokens in the adapter.
+    assert resp.usage is not None
+    assert (resp.usage.input_tokens, resp.usage.output_tokens) == (7, 3)
 
 
 def test_openai_401_is_config_error(monkeypatch):
@@ -223,6 +226,8 @@ def test_anthropic_request_shape_hoists_system_and_omits_temperature(monkeypatch
     assert captured["headers"]["anthropic-version"] == "2023-06-01"
     assert resp.text == "hello"
     assert resp.raw["usage"] == {"input_tokens": 5, "output_tokens": 2}
+    assert resp.usage is not None
+    assert (resp.usage.input_tokens, resp.usage.output_tokens) == (5, 2)
 
 
 def test_anthropic_temperature_included_only_for_supported_model(monkeypatch):

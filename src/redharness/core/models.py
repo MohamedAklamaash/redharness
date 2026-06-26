@@ -13,6 +13,22 @@ from pydantic import BaseModel, Field
 Role = Literal["system", "user", "assistant", "tool"]
 
 
+class Usage(BaseModel):
+    """Provider-normalized token accounting for one response.
+
+    Both fields are optional because not every provider reports both halves (and
+    offline/reference targets report neither). The per-provider shapes
+    (``prompt_tokens``/``completion_tokens`` for OpenAI, ``input_tokens``/
+    ``output_tokens`` for Anthropic) are normalized to these names *inside each
+    adapter*, so the metric layer never sees a provider-specific shape.
+    """
+
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+
+    model_config = {"frozen": True}
+
+
 class Message(BaseModel):
     """A single chat message in a transcript."""
 
@@ -31,12 +47,18 @@ class Response(BaseModel):
     plain integer carrying zero credential data, surfaced so the run-level query
     budget can be charged the true provider-call count at the innermost call site.
     Offline/reference targets make no HTTP call and leave it at the default ``1``.
+
+    ``usage`` is the provider-normalized token accounting for the response (``None``
+    for offline/reference targets and for failed calls that never produced a body),
+    used by the cost/token-usage metrics. ``raw`` stays the parsed response body
+    only — no header or credential ever lands in it.
     """
 
     text: str
     target_name: str
     raw: dict[str, Any] = Field(default_factory=dict)
     http_calls: int = 1
+    usage: Usage | None = None
 
     model_config = {"frozen": True}
 

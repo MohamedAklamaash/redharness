@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from redharness.core.models import Message, Response
+from redharness.core.models import Message, Response, Usage
 from redharness.core.registry import register_target
 from redharness.errors import TargetRuntimeError
 from redharness.targets._http import HttpTarget
@@ -79,17 +79,21 @@ class AnthropicTarget(HttpTarget):
 
     def generate(self, messages: list[Message], tools: list[dict] | None = None) -> Response:
         body = self._build_body(messages)
+        if tools:
+            body["tools"] = [_to_anthropic_tool(tool) for tool in tools]
         headers = {
             "x-api-key": self._api_key,
             "anthropic-version": ANTHROPIC_VERSION,
             "content-type": "application/json",
         }
-        # ``raw`` is the parsed body ONLY (carries ``usage``); the key never lands.
-        # ``http_calls`` (retry-inclusive call count) is a bare int the run budget
-        # charges; it carries no secret data.
         data, attempts = self._request_json(f"{self.base_url}/messages", body, headers)
+        data["tool_calls"] = _extract_tool_calls(data)
         return Response(
-            text=_extract_text(data), target_name=self.name, raw=data, http_calls=attempts
+            text=_extract_text(data),
+            target_name=self.name,
+            raw=data,
+            http_calls=attempts,
+            usage=_extract_usage(data),
         )
 
     def _build_body(self, messages: list[Message]) -> dict[str, Any]:
@@ -143,3 +147,60 @@ def _extract_text(data: dict[str, Any]) -> str:
         and isinstance(block.get("text"), str)
     ]
     return "".join(parts)
+
+
+def _extract_tool_calls(data: dict[str, Any]) -> list[dict[str, Any]]:
+    """Normalize Anthropic ``tool_use`` blocks to ``[{name, arguments, call_id}]``.
+
+    The Messages API returns tool calls as ``content[]`` blocks of
+    ``type == "tool_use"`` carrying ``name`` and an ``input`` dict; this flattens
+    them into the normalized list the agent loop reads from ``raw['tool_calls']``.
+    """
+    blocks = data.get("content")
+    if not isinstance(blocks, list):
+        return []
+    calls: list[dict[str, Any]] = []
+    for index, block in enumerate(blocks):
+        if not isinstance(block, dict) or block.get("type") != "tool_use":
+            continue
+        arguments = block.get("input")
+        calls.append(
+            {
+                "name": block.get("name", ""),
+                "arguments": arguments if isinstance(arguments, dict) else {},
+                "call_id": block.get("id") or f"call-{index}",
+            }
+        )
+    return calls
+
+
+def _to_anthropic_tool(tool: dict[str, Any]) -> dict[str, Any]:
+    """Translate an OpenAI ``function`` tool schema to the Anthropic tool shape.
+
+    The agent loop emits the OpenAI ``{type: function, function: {...}}`` schema;
+    Anthropic expects ``{name, description, input_schema}``. A tool already in the
+    Anthropic shape (or any unrecognised shape) is passed through unchanged.
+    """
+    function = tool.get("function") if isinstance(tool, dict) else None
+    if not isinstance(function, dict):
+        return tool
+    return {
+        "name": function.get("name", ""),
+        "description": function.get("description", ""),
+        "input_schema": function.get("parameters", {"type": "object"}),
+    }
+
+
+def _extract_usage(data: dict[str, Any]) -> Usage | None:
+    """Normalize Anthropic ``usage.input_tokens``/``output_tokens`` to ``Usage``."""
+    usage = data.get("usage")
+    if not isinstance(usage, dict):
+        return None
+    return Usage(
+        input_tokens=_as_int(usage.get("input_tokens")),
+        output_tokens=_as_int(usage.get("output_tokens")),
+    )
+
+
+def _as_int(value: Any) -> int | None:
+    return value if isinstance(value, int) else None

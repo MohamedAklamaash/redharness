@@ -45,6 +45,18 @@ dashboard = [
     "streamlit>=1.40",
     "pandas>=2",
 ]
+# Heavy, unverified-in-CI external-attack scaffolds. Never imported by the offline
+# core: each adapter imports its dependency lazily inside ``run`` and raises a typed
+# error when the extra is absent.
+gcg = [
+    "torch",
+]
+garak = [
+    "garak",
+]
+pyrit = [
+    "pyrit",
+]
 
 [project.scripts]
 redharness = "redharness.cli:main"
