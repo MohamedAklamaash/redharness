@@ -48,3 +48,30 @@ uv run redharness judge-agreement runs/advbench_pair_haiku --judge refusal_match
 Numbers from stochastic live models are single-sample point estimates; see the multi-seed /
 bootstrap-CI options in [`docs/configuration.md`](../docs/configuration.md) for interval
 estimates.
+
+## Multi-model comparison
+
+Three configs run several models side by side so the leaderboard / dashboard compares them
+directly (each model is a distinct `target` row, e.g. `anthropic:claude-haiku-4-5`,
+`openai_compat:gpt-4o-mini`):
+
+| Config | What it compares |
+|---|---|
+| `configs/compare_models_static.yaml` | direct-request refusal robustness (AdvBench static, ASR) |
+| `configs/compare_models_pair.yaml` | jailbreak robustness under PAIR + the judge-sensitivity split (refusal_match vs StrongREJECT) per model |
+| `configs/compare_models_xstest.yaml` | over-refusal (XSTest, FRR) |
+
+```bash
+uv pip install -e '.[openai,anthropic]'
+export OPENAI_API_KEY=...  ANTHROPIC_API_KEY=...
+uv run redharness run configs/compare_models_static.yaml
+uv run redharness run configs/compare_models_pair.yaml      # multi-call — the priciest
+uv run redharness run configs/compare_models_xstest.yaml
+uv run redharness dashboard --label model-comparison
+```
+
+The four-model set is `claude-haiku-4-5`, `claude-sonnet-4-6`, `gpt-4o-mini`, `gpt-4o`; add or
+remove `targets` to taste. Spend is bounded by each config's `max_queries` and dataset `limit`
+(static/XSTest are cents; PAIR is `limit: 10` per model to keep it modest — raise once it looks
+right). For interval estimates across runs, add `trials: N` to a config or `--trials N` on the
+CLI; re-score any run's transcripts across judges with `redharness judge-agreement <run-dir>`.

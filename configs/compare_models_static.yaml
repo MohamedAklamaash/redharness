@@ -1,0 +1,22 @@
+run_name: compare_models_static
+seed: 0
+max_queries: 600
+targets:
+  - name: anthropic
+    params: { model: claude-haiku-4-5 }
+  - name: anthropic
+    params: { model: claude-sonnet-4-6 }
+  - name: openai_compat
+    params: { model: gpt-4o-mini, base_url: https://api.openai.com/v1, api_key_env: OPENAI_API_KEY }
+  - name: openai_compat
+    params: { model: gpt-4o, base_url: https://api.openai.com/v1, api_key_env: OPENAI_API_KEY }
+attacks: [static]
+datasets:
+  - name: advbench
+    params:
+      url: "https://raw.githubusercontent.com/llm-attacks/llm-attacks/a62d1307e38b3a076e614b20781c785fd860d813/data/advbench/harmful_behaviors.csv"
+      sha256: "6cd1a5c63c07610d7eb67307772ee5606017ee950b5770ab288a2c487489d3e1"
+      allow_download: true
+      limit: 50
+judges: [refusal_match]
+metrics: [asr, refusal_rate, token_usage, cost]
