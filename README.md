@@ -209,6 +209,8 @@ All metrics are defined as pure functions over scored attempts; inapplicable
 | `pii_leak_rate` | leak rate over PII probes | DecodingTrust |
 | `system_prompt_leak_rate` | leak rate over system-prompt probes | — |
 | `verbatim_overlap` | mean best verbatim overlap (longest-common-substring ratio) | Carlini 2021 / Nasr 2023 |
+| `token_usage` | total input + output tokens consumed across a run (N/A for offline runs) | — |
+| `cost` | estimated USD from a dated per-model price table; combined target/attacker/judge tokens are priced at the target's rate (N/A for offline runs) | — |
 
 ## 7. Who should use redharness, and why
 
@@ -237,20 +239,39 @@ launches a Streamlit web app that aggregates every run into a filterable, per-su
 leaderboard. The literature the framework is grounded in is enumerated in
 [`CITATIONS.bib`](CITATIONS.bib).
 
-## 9. Limitations and current scope
+## 9. Implemented surface and current scope
 
-The framework and the offline evaluation paths for all three surfaces are implemented and
-test-locked. A first **live** end-to-end path is now wired behind optional extras and
-environment-only credentials: hardened `openai_compat` and `anthropic` target adapters
-(shared httpx transport, retry/backoff, typed errors), the **PAIR** attack (Chao et al.
-2023) with an injected attacker model and judge, and the **StrongREJECT** forbidden-prompt
-set plus its autograder — see [`configs/real_eval.example.yaml`](configs/real_eval.example.yaml)
-and the "Live evaluation" section of [`docs/configuration.md`](docs/configuration.md). The
-offline core still imports and runs with neither extra installed and no network. The bundled
-content is intentionally synthetic, so absolute numbers from the smoke evaluations are
-illustrative of the *mechanism*, not of any real model's safety. Still scaffolded: bundled
-real attack/extraction corpora (e.g. AgentDojo/InjecAgent attack sets, web-scale divergence
-prompts) and a hosted, gaming-resistant leaderboard verifier.
+All three surfaces and their offline evaluation paths are implemented and test-locked, and
+the harness ships a broad, pluggable component set:
+
+- **Attacks** — single-turn (`static`, `template`) and multi-turn attacker-LLM attacks
+  `pair` (Chao et al. 2023), `tap` (Mehrotra et al. 2023), and `crescendo`, alongside the
+  leakage probes. `gcg`, `garak`, and `pyrit` are registered *scaffolds* whose heavy
+  dependencies are unverified in CI.
+- **Datasets** — the bundled synthetic sets, plus opt-in, hash-pinned loaders for AdvBench,
+  HarmBench, JailbreakBench (JBB-Behaviors), XSTest, and OR-Bench: fetched-and-verified by
+  SHA-256 behind an explicit `allow_download`, never committed to the repository.
+- **Targets** — deterministic offline reference targets, plus hardened live `openai_compat`
+  and `anthropic` adapters (shared httpx transport, retry/backoff, typed errors, a
+  fail-closed `max_queries` budget, normalized token usage, and tool-calling so the injection
+  surface runs against real agents). Local servers (Ollama, vLLM) run through the
+  OpenAI-compatible adapter.
+- **Judges** — string-match, the StrongREJECT-style and faithful StrongREJECT rubric graders,
+  and the injection/leak detectors.
+- **Metrics** — the per-surface metrics above plus `token_usage` and `cost`.
+
+Everything outside the bundled synthetic content is gated behind optional extras and explicit
+opt-in; the offline core imports and runs with no extras and no network, enforced by a CI
+tripwire. Because the bundled content is intentionally synthetic, absolute numbers from the
+smoke evaluations illustrate the *mechanism*, not any real model's safety. See
+[`configs/real_eval.example.yaml`](configs/real_eval.example.yaml) and the
+Live-evaluation / Tool-calling / Local-servers sections of
+[`docs/configuration.md`](docs/configuration.md).
+
+Deferred to dedicated future slices: local Hugging Face classifier judges (Llama Guard,
+WildGuard, the HarmBench classifier), in-process HF and Bedrock/Vertex adapters, the AutoDAN
+attack, AgentDojo/InjecAgent scenario ingestion, and a hosted, gaming-resistant leaderboard
+verifier.
 
 ## 10. Responsible use
 

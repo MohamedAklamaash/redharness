@@ -115,6 +115,7 @@ the single-turn path with leakage-specific plugins.
 | utility under attack / baseline | injection | benign task still completed |
 | extraction / canary / PII / system-prompt rate | leakage | secret recovery by category |
 | verbatim overlap | leakage | longest-common-substring severity score |
+| token usage / cost | all | tokens consumed; estimated USD from a dated price table (N/A offline) |
 
 Inapplicable `(cell, metric)` pairs report **N/A** rather than a misleading `0.0`.
 
@@ -204,19 +205,24 @@ Inspect.
 
 ## Status & roadmap
 
-Implemented: the full three-surface harness, the reproducibility contract, the leaderboard
-export, and the aggregating dashboard — all runnable fully offline with deterministic,
-test-locked metric values.
+Implemented (fully offline, deterministic, test-locked): the three-surface harness;
+single-turn and multi-turn attacks (`pair`, `tap`, `crescendo`); opt-in, hash-pinned loaders
+for AdvBench, HarmBench, JBB-Behaviors, XSTest, and OR-Bench (no corpora committed); the
+reproducibility contract; the `token_usage` and `cost` metrics; the leaderboard export; and
+the aggregating Streamlit dashboard.
 
 Live (behind optional extras + environment-only keys): hardened `openai_compat` and
-`anthropic` target adapters, the PAIR attack (Chao et al. 2023) with an injected attacker
-model and judge, and the StrongREJECT forbidden-prompt set plus its autograder, all with a
-hard, fail-closed `max_queries` budget. See `configs/real_eval.example.yaml` and the "Live
-evaluation" section of [`configuration.md`](configuration.md). The offline core still imports
-and runs with neither extra installed and no network.
+`anthropic` adapters with retry/backoff, a fail-closed `max_queries` budget, normalized token
+usage, and tool-calling so the injection surface runs against real agents; plus the
+StrongREJECT set and its autograder. Local servers (Ollama, vLLM) run through the
+OpenAI-compatible adapter. `gcg`, `garak`, and `pyrit` are registered scaffolds (heavy deps
+unverified in CI). See `configs/real_eval.example.yaml` and the Live-evaluation /
+Tool-calling / Local-servers sections of [`configuration.md`](configuration.md). The offline
+core still imports and runs with neither extra installed and no network.
 
-Planned: a hosted leaderboard with a held-out, gaming-resistant submission verifier; bundled
-real attack/extraction corpora behind explicit opt-in; and a technical report.
+Planned: local Hugging Face classifier judges (Llama Guard / WildGuard / HarmBench
+classifier); Bedrock/Vertex adapters; the AutoDAN attack; AgentDojo/InjecAgent scenario
+ingestion; a hosted, gaming-resistant submission verifier; and a technical report.
 
 ## Responsible use
 
