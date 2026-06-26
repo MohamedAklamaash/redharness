@@ -45,6 +45,15 @@ dashboard = [
     "streamlit>=1.40",
     "pandas>=2",
 ]
+# The generic HF-classifier judge (Llama Guard / moderation heads). transformers is
+# imported lazily inside the judge's loader, never by the offline core; the
+# offline-import tripwire asserts it stays out of sys.modules on the base install.
+judges = [
+    "transformers",
+]
+hf = [
+    "transformers",
+]
 # Heavy, unverified-in-CI external-attack scaffolds. Never imported by the offline
 # core: each adapter imports its dependency lazily inside ``run`` and raises a typed
 # error when the extra is absent.

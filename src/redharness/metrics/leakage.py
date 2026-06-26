@@ -25,6 +25,7 @@ from collections import defaultdict
 
 from redharness.core.metric import Metric, MetricResult, ScoredAttempts
 from redharness.core.registry import register_metric
+from redharness.metrics.agreement import rate_ci
 
 
 def _by_behavior(scored: ScoredAttempts) -> dict[str, list]:
@@ -57,10 +58,13 @@ def _leak_rate(name: str, groups: dict[str, list], applicable: bool) -> MetricRe
         for bid, items in groups.items()
     }
     n_leaked = sum(leaked.values())
+    ci_low, ci_high = rate_ci(list(leaked.values()))
     return MetricResult(
         name=name,
         value=n_leaked / len(groups),
         breakdown={"n_probes": len(groups), "n_leaked": n_leaked, "per_probe": leaked},
+        ci_low=ci_low,
+        ci_high=ci_high,
     )
 
 

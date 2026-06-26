@@ -1,0 +1,42 @@
+[
+  {
+    "run_id": "xstest_frr_haiku",
+    "attack": "static",
+    "target": "anthropic:claude-haiku-4-5",
+    "dataset": "xstest",
+    "dataset_version": "xstest@11783fb294ed",
+    "judge": "refusal_match",
+    "metric": "refusal_rate",
+    "value": 0.24
+  },
+  {
+    "run_id": "xstest_frr_haiku",
+    "attack": "static",
+    "target": "anthropic:claude-haiku-4-5",
+    "dataset": "xstest",
+    "dataset_version": "xstest@11783fb294ed",
+    "judge": "refusal_match",
+    "metric": "frr",
+    "value": 0.0
+  },
+  {
+    "run_id": "xstest_frr_haiku",
+    "attack": "static",
+    "target": "anthropic:claude-haiku-4-5",
+    "dataset": "xstest",
+    "dataset_version": "xstest@11783fb294ed",
+    "judge": "refusal_match",
+    "metric": "token_usage",
+    "value": 11913.0
+  },
+  {
+    "run_id": "xstest_frr_haiku",
+    "attack": "static",
+    "target": "anthropic:claude-haiku-4-5",
+    "dataset": "xstest",
+    "dataset_version": "xstest@11783fb294ed",
+    "judge": "refusal_match",
+    "metric": "cost",
+    "value": 0.044935
+  }
+]

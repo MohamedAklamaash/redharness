@@ -4117,6 +4117,12 @@ garak = [
 gcg = [
     { name = "torch" },
 ]
+hf = [
+    { name = "transformers" },
+]
+judges = [
+    { name = "transformers" },
+]
 openai = [
     { name = "httpx" },
 ]
@@ -4140,9 +4146,11 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6" },
     { name = "streamlit", marker = "extra == 'dashboard'", specifier = ">=1.40" },
     { name = "torch", marker = "extra == 'gcg'" },
+    { name = "transformers", marker = "extra == 'hf'" },
+    { name = "transformers", marker = "extra == 'judges'" },
     { name = "typer", specifier = ">=0.12" },
 ]
-provides-extras = ["dev", "openai", "anthropic", "dashboard", "gcg", "garak", "pyrit"]
+provides-extras = ["dev", "openai", "anthropic", "dashboard", "judges", "hf", "gcg", "garak", "pyrit"]
 
 [[package]]
 name = "referencing"

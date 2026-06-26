@@ -41,6 +41,9 @@ jobs:
       - name: Offline data-leakage smoke eval (no secrets)
         run: uv run redharness run configs/leakage_smoke.yaml
 
+      - name: Offline judge-agreement (reference judges only, no secrets)
+        run: uv run redharness judge-agreement runs/smoke --judge refusal_match --judge rubric
+
       - name: Aggregate leaderboards from smoke runs (no server, no streamlit)
         run: |
           uv run python -c "from pathlib import Path; from redharness.dashboard.aggregate import aggregate_runs; data = aggregate_runs(Path('runs')); print(f'{data.run_count} run(s), {data.cell_count} cell(s)'); assert data.rows, 'no leaderboard rows aggregated from smoke runs'"

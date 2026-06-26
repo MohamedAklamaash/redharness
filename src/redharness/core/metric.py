@@ -24,11 +24,19 @@ class MetricResult(BaseModel):
     computed over (its relevant subset is empty) — e.g. utility_under_attack on a
     no-injection cell. ``None`` reads as "N/A", distinct from ``0.0`` which means
     "applicable, and the agent scored zero".
+
+    ``ci_low``/``ci_high`` are an optional, additive 95% bootstrap confidence
+    interval on a *rate* ``value`` (Efron's bootstrap over the per-behavior
+    outcomes, seeded for determinism). They stay ``None`` for non-rate metrics and
+    for single-sample cells where an interval is degenerate, so the headline
+    ``value`` is never affected.
     """
 
     name: str
     value: float | None
     breakdown: dict[str, Any] = Field(default_factory=dict)
+    ci_low: float | None = None
+    ci_high: float | None = None
 
 
 MetricFn = Callable[[ScoredAttempts], MetricResult]

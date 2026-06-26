@@ -82,13 +82,33 @@ redistributed**. The committed loaders carry placeholder source URLs (the
 |---|---|---|---|
 | AdvBench | github.com/llm-attacks/llm-attacks (`data/advbench/harmful_behaviors.csv`) | MIT | fetch, not redistribute |
 | HarmBench | github.com/centerforaisafety/HarmBench (`data/behavior_datasets`) | MIT | fetch, not redistribute |
-| JBB-Behaviors | github.com/JailbreakBench/jailbreakbench (`JBB-Behaviors`) | MIT | fetch, not redistribute |
+| JBB-Behaviors | huggingface.co/datasets/JailbreakBench/JBB-Behaviors (`data/harmful-behaviors.csv`) | MIT | fetch, not redistribute |
 | StrongREJECT | github.com/alexandrasouly/strongreject | MIT | fetch, not redistribute |
 | XSTest | github.com/paul-rottger/xstest | CC-BY-4.0 | fetch, not redistribute |
 | OR-Bench | huggingface.co/datasets/bench-llm/or-bench | CC-BY-4.0 | fetch, not redistribute |
 
 When adding a dataset loader, add a row here with its source URL, license, and the
 fetch-not-redistribute note.
+
+### Verified pins (commit-pinned URL + computed sha256)
+
+These were resolved against the canonical sources and the sha256 computed from the
+fetched bytes (`curl -sL <url> | shasum -a 256`). The committed loader defaults stay
+inert placeholders; pass one of these `url` + `sha256` pairs (and `allow_download:
+true`) at runtime. The same block is in [`docs/configuration.md`](docs/configuration.md)
+under "Pinning a dataset".
+
+| Dataset | Commit-pinned URL | sha256 |
+|---|---|---|
+| AdvBench | `https://raw.githubusercontent.com/llm-attacks/llm-attacks/098262edf85f807224e70ecd87b9d83716bf6b73/data/advbench/harmful_behaviors.csv` | `6cd1a5c63c07610d7eb67307772ee5606017ee950b5770ab288a2c487489d3e1` |
+| HarmBench | `https://raw.githubusercontent.com/centerforaisafety/HarmBench/c0423b952435fcc8467108d8f25962dbae5b7de2/data/behavior_datasets/harmbench_behaviors_text_all.csv` | `8d81accedd38eaaf8b760618622bb888417d1fd0c86eba65c427a16f1cbb4afc` |
+| OR-Bench | `https://huggingface.co/datasets/bench-llm/or-bench/resolve/e36d8b80e81837c8a8f264bbb2a49f1b32c7e272/or-bench-hard-1k.csv` | `a6e2f1166416efe5901f3bb05c47dc92ab3aca3acfe143693d38b8057d841e6d` |
+| XSTest | `https://raw.githubusercontent.com/paul-rottger/xstest/d7bb5bd738c1fcbc36edd83d5e7d1b71a3e2d84d/xstest_prompts.csv` | `11783fb294ed017473ee53c207d71f2161c7672c8d0b037501e78387f801cb5a` |
+| JBB-Behaviors | `https://huggingface.co/datasets/JailbreakBench/JBB-Behaviors/resolve/886acc352a31533ffbcf4ef22c744658688086fc/data/harmful-behaviors.csv` | `4a8ec6832056b631eb092dccc60d37a61c3d441268268888b3d006288afeffa1` |
+
+The JBB-Behaviors source was migrated to the Hugging Face dataset
+(`data/harmful-behaviors.csv`, header `Index,Goal,Target,Behavior,Category,Source`);
+the older `jailbreakbench` GitHub package path no longer ships the CSV.
 
 ## Before you open a PR
 

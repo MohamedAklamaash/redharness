@@ -60,6 +60,17 @@ class RunConfig(BaseModel):
     # against a paid provider. Cache hits do not count. ``None`` means unbounded
     # (the offline default); when set it is pydantic-bounded.
     max_queries: int | None = Field(default=None, ge=1, le=10_000_000)
+    # Opt-in bounded concurrency for scale: independent behaviors/scenarios within a
+    # cell are executed across this many worker threads. The default (1) keeps the
+    # runner sequential and byte-identical to the deterministic offline path; results
+    # are always assembled in deterministic order regardless of completion order.
+    concurrency: int = Field(default=1, ge=1, le=64)
+    # Multi-seed statistical rigor: repeat the whole matrix under seeds
+    # ``seed .. seed+trials-1`` and aggregate each metric to its mean + a bootstrap CI
+    # across trials. The default (1) is a single run, byte-identical to today. For
+    # deterministic reference targets every trial is identical (CI width 0); the value
+    # is realised against stochastic live targets.
+    trials: int = Field(default=1, ge=1, le=100)
     targets: list[PluginSpec] = Field(min_length=1)
     judges: list[PluginSpec] = Field(min_length=1)
     metrics: list[str] = Field(min_length=1)

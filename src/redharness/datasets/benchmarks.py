@@ -182,13 +182,15 @@ class JBBBehaviorsDataset(_BenchmarkDataset):
     """JBB-Behaviors harmful set (Chao et al. 2024, JailbreakBench).
 
     CSV columns ``Index,Goal,Target,Behavior,Category,Source``; ``Goal`` is the
-    forbidden prompt and ``Category`` the harm category.
+    forbidden prompt and ``Category`` the harm category. The canonical source is the
+    ``JailbreakBench/JBB-Behaviors`` Hugging Face dataset (``data/harmful-behaviors.csv``);
+    the older ``jailbreakbench`` GitHub package path no longer ships the CSV.
     """
 
     dataset_label = "JBB-Behaviors"
     DEFAULT_URL = (
-        "https://raw.githubusercontent.com/JailbreakBench/jailbreakbench/"
-        f"{_PLACEHOLDER_COMMIT}/src/jailbreakbench/data/behaviors.csv"
+        "https://huggingface.co/datasets/JailbreakBench/JBB-Behaviors/resolve/"
+        f"{_PLACEHOLDER_COMMIT}/data/harmful-behaviors.csv"
     )
 
     def __init__(self, url: str = DEFAULT_URL, name: str = "jbb_behaviors", **kwargs) -> None:

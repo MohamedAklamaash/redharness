@@ -239,6 +239,24 @@ launches a Streamlit web app that aggregates every run into a filterable, per-su
 leaderboard. The literature the framework is grounded in is enumerated in
 [`CITATIONS.bib`](CITATIONS.bib).
 
+### A first real-model result (fidelity)
+
+A first end-to-end evaluation against a real frontier model (`claude-haiku-4-5`;
+attacker/grader `gpt-4o-mini`) on commit-pinned public sets reproduces published behavior;
+the leaderboards are committed under [`results/`](results/).
+
+| Evaluation | Result |
+|---|---|
+| AdvBench · direct (static) | `asr 0.00`, `refusal_rate 1.00` — aligned models refuse direct harmful requests (the undefended baseline) |
+| AdvBench · PAIR | `asr 0.15` (StrongREJECT grader) / `1.00` (string-match) — the attack jailbreaks through the harness (static ≈ 0 → PAIR ≫ 0) |
+| XSTest · safe split | `frr 0.00` — no over-refusal of benign prompts |
+
+The PAIR cell reproduces StrongREJECT's central finding directly: scoring the *same*
+transcripts, the string-match judge reports a ~6.7× higher attack-success rate than the
+rubric grader (`asr` 1.00 vs 0.15) — the judge-sensitivity effect this framework's provenance
+triple and `redharness judge-agreement` tooling (per-judge ASR + Cohen's κ) are built to
+surface.
+
 ## 9. Implemented surface and current scope
 
 All three surfaces and their offline evaluation paths are implemented and test-locked, and

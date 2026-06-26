@@ -269,6 +269,55 @@ judges:
 > research signal, which is why the judge name is stamped on every verdict and leaderboard
 > cell. Add several judges to one run to compare them.
 
+### Quantifying judge disagreement after a run
+
+Once a run has written `transcripts.jsonl`, re-score it under any set of judges and get
+each judge's success rate plus pairwise raw agreement and Cohen's kappa — no re-querying
+the target:
+
+```bash
+uv run redharness judge-agreement runs/<run> --judge refusal_match --judge strongreject
+```
+
+The importable form mirrors the CLI and is the offline test seam (an injected `reference`
+grader keeps it deterministic):
+
+```python
+from redharness.analysis import judge_spec, run_judge_agreement
+
+report = run_judge_agreement(
+    "runs/<run>",
+    [judge_spec("refusal_match"), judge_spec("rubric", grader="reference")],
+)
+print(report.asr, report.pairwise[0].cohen_kappa)
+```
+
+`judge_spec(name, grader)` introspects the judge constructor and injects a `grader`
+sub-spec only when the judge needs one, so grader-backed and grader-free judges are mixed
+freely. Cohen's kappa lives as a pure function in `redharness.metrics.agreement`.
+
+### A classifier-as-judge (`hf_classifier`)
+
+To use a published Hugging Face safety classifier as a judge, the bundled
+`hf_classifier` judge is parameterized by `model_id`, a `preset` (or a `parse_fn` mapping
+raw output → `(success, score)`), and `trust_remote_code` (default `False`). It imports
+`transformers` **lazily** inside its loader and caches the pipeline on the instance, so
+the offline core never pulls in the heavy dependency. The classifier callable is
+dependency-injected, which is exactly how the offline test drives the full verdict path
+with a stub:
+
+```python
+from redharness.judges.hf_classifier import HFClassifierJudge
+
+judge = HFClassifierJudge(preset="llama_guard", classifier=lambda text: "unsafe")
+verdict = judge.score(behavior, attempt)   # success=True, no transformers import
+```
+
+When you add your own classifier judge, follow the same shape: lazy-import the heavy
+dependency inside the method body, declare it as an optional extra in `pyproject.toml`,
+cache the loaded model on the instance, and accept an injected callable so CI can test the
+plumbing without weights.
+
 ---
 
 ## 5. A custom Metric

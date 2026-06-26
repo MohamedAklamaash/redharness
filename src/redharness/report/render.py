@@ -43,9 +43,18 @@ def build_leaderboard(result: RunResult) -> list[dict]:
                     "judge": cell.judge,
                     "metric": metric_name,
                     "value": metric.value,
+                    "ci_low": metric.ci_low,
+                    "ci_high": metric.ci_high,
                 }
             )
     return rows
+
+
+def _fmt_ci(metric) -> str:
+    """Format a metric's bootstrap CI as ``[lo, hi]`` or an em dash when absent."""
+    if metric.ci_low is None or metric.ci_high is None:
+        return "—"
+    return f"[{metric.ci_low:.4f}, {metric.ci_high:.4f}]"
 
 
 def render_markdown(result: RunResult) -> str:
@@ -64,10 +73,10 @@ def render_markdown(result: RunResult) -> str:
             f"dataset `{cell.dataset}` ({cell.dataset_version}) · judge `{cell.judge}`"
         )
         lines.append("")
-        lines.append("| metric | value |")
-        lines.append("| --- | --- |")
+        lines.append("| metric | value | 95% CI |")
+        lines.append("| --- | --- | --- |")
         for name, metric in cell.metrics.items():
-            lines.append(f"| {name} | {_fmt_value(metric.value)} |")
+            lines.append(f"| {name} | {_fmt_value(metric.value)} | {_fmt_ci(metric)} |")
         lines.append("")
     return "\n".join(lines)
 

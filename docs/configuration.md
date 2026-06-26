@@ -194,7 +194,7 @@ over-refusal sets map benign prompts to `should_comply` so the false-refusal-rat
 |---|---|---|---|
 | `advbench` | llm-attacks/llm-attacks | `should_refuse` | harmful behaviors (ASR) |
 | `harmbench` | centerforaisafety/HarmBench | `should_refuse` | standard behaviors (ASR) |
-| `jbb_behaviors` | JailbreakBench/jailbreakbench | `should_refuse` | JBB harmful set (ASR) |
+| `jbb_behaviors` | JailbreakBench/JBB-Behaviors (HF) | `should_refuse` | JBB harmful set (ASR) |
 | `xstest` | paul-rottger/xstest | `should_comply` (safe split) / `should_refuse` (contrast) | exaggerated safety (FRR) |
 | `or_bench` | OR-Bench | `should_comply` | over-refusal (FRR) |
 
@@ -220,22 +220,44 @@ pin llm-attacks/llm-attacks data/advbench/harmful_behaviors.csv
 pin paul-rottger/xstest      xstest_prompts.csv
 ```
 
-Verified pins for the two permissively-licensed sets (AdvBench, MIT; XSTest, CC-BY-4.0):
+Verified pins for all five sets (commit-pinned URL + sha256 computed from the fetched
+bytes). The same table is in [`CONTRIBUTING.md`](../CONTRIBUTING.md); respect each
+upstream license (AdvBench/HarmBench/JBB: MIT; XSTest/OR-Bench: CC-BY-4.0):
 
 ```yaml
 datasets:
   - name: advbench
     params:
-      url: "https://raw.githubusercontent.com/llm-attacks/llm-attacks/a62d1307e38b3a076e614b20781c785fd860d813/data/advbench/harmful_behaviors.csv"
+      url: "https://raw.githubusercontent.com/llm-attacks/llm-attacks/098262edf85f807224e70ecd87b9d83716bf6b73/data/advbench/harmful_behaviors.csv"
       sha256: "6cd1a5c63c07610d7eb67307772ee5606017ee950b5770ab288a2c487489d3e1"
       allow_download: true
       limit: 50                       # cap the behavior count for cost; AdvBench has 520
+  - name: harmbench
+    params:
+      url: "https://raw.githubusercontent.com/centerforaisafety/HarmBench/c0423b952435fcc8467108d8f25962dbae5b7de2/data/behavior_datasets/harmbench_behaviors_text_all.csv"
+      sha256: "8d81accedd38eaaf8b760618622bb888417d1fd0c86eba65c427a16f1cbb4afc"
+      allow_download: true
+  - name: jbb_behaviors
+    params:
+      url: "https://huggingface.co/datasets/JailbreakBench/JBB-Behaviors/resolve/886acc352a31533ffbcf4ef22c744658688086fc/data/harmful-behaviors.csv"
+      sha256: "4a8ec6832056b631eb092dccc60d37a61c3d441268268888b3d006288afeffa1"
+      allow_download: true
   - name: xstest
     params:
-      url: "https://raw.githubusercontent.com/paul-rottger/xstest/475f10bf0a3d6a9dfb174b6de1a38afbfdff98a5/xstest_prompts.csv"
+      url: "https://raw.githubusercontent.com/paul-rottger/xstest/d7bb5bd738c1fcbc36edd83d5e7d1b71a3e2d84d/xstest_prompts.csv"
       sha256: "11783fb294ed017473ee53c207d71f2161c7672c8d0b037501e78387f801cb5a"
       allow_download: true
+  - name: or_bench
+    params:
+      url: "https://huggingface.co/datasets/bench-llm/or-bench/resolve/e36d8b80e81837c8a8f264bbb2a49f1b32c7e272/or-bench-hard-1k.csv"
+      sha256: "a6e2f1166416efe5901f3bb05c47dc92ab3aca3acfe143693d38b8057d841e6d"
+      allow_download: true
 ```
+
+> HF datasets 302-redirect to an LFS object; `urllib` follows the redirect. The
+> dataset fetch verifies the certificate against `certifi`'s CA bundle when it is
+> importable (it ships with the `openai`/`anthropic`/`dashboard` extras), so the
+> macOS python.org `CERTIFICATE_VERIFY_FAILED` failure does not occur out of the box.
 
 ## Cost & token-usage metrics
 
@@ -256,6 +278,81 @@ only — verify against your provider's current pricing.
 
 ```yaml
 metrics: [asr, refusal_rate, token_usage, cost]
+```
+
+## Confidence intervals & multi-seed trials
+
+Every rate metric (`asr`, `asr_at_k`, `refusal_rate`, `frr`, and the injection/leakage
+rates) now carries an additive 95% **bootstrap confidence interval** in the report and
+`leaderboard.json` (`ci_low`/`ci_high`). The interval is a seeded percentile bootstrap
+over the per-behavior outcomes, so it is deterministic and never changes the headline
+`value`; single-sample cells report `null` bounds.
+
+For a stochastic live target a single run understates uncertainty, so `--trials N`
+repeats the whole matrix under seeds `seed .. seed+N-1` and aggregates each metric to
+its **mean across trials + a bootstrap CI** (seeded from the run seed). Per-trial
+artifacts are kept under `runs/<run_name>/trials/`. For deterministic reference targets
+every trial is identical, so the CI width is `0` — the value shows up against live
+models.
+
+```bash
+uv run redharness run configs/smoke.yaml --trials 5      # mean + CI over 5 seeds
+```
+
+`trials` can also be a config field (`trials: 5`); the `--trials` flag overrides it. The
+default (no trials) is a single run, byte-identical to before.
+
+## Judge sensitivity — `judge-agreement`
+
+The same transcripts can yield very different headline numbers under different judges:
+on AdvBench×PAIR a refusal-string judge reported ASR `1.0` while StrongREJECT reported
+`0.15`. `judge-agreement` re-scores a finished run's `transcripts.jsonl` under multiple
+judges and quantifies the disagreement with each judge's success rate, the pairwise raw
+agreement, and **Cohen's kappa** (Cohen 1960):
+
+```bash
+uv run redharness judge-agreement runs/advbench_pair --judge refusal_match --judge strongreject
+```
+
+Grader-backed judges (`rubric`, `strongreject`) are built with an injected grader target
+(`--grader`, default the offline `reference`), exactly like a run config's `grader:`
+sub-spec. The command prints a small table and writes `judge_agreement.json` into the run
+directory. At least two judges are required.
+
+## Classifier-as-judge — `hf_classifier`
+
+`hf_classifier` uses a published Hugging Face classifier (Llama Guard, a moderation head,
+a yes/no harmfulness model) as the judge. `transformers` is imported lazily inside the
+judge and the pipeline is cached for the run; install the extra to use it:
+
+```bash
+uv pip install -e '.[judges]'      # alias: .[hf]
+```
+
+```yaml
+judges:
+  - name: hf_classifier
+    params:
+      model_id: meta-llama/Llama-Guard-3-8B
+      preset: llama_guard           # maps safe/unsafe -> verdict; also: yes_no
+      trust_remote_code: false      # default; opt in explicitly if a model needs it
+```
+
+`preset` selects the output→verdict mapping (`llama_guard` reads `safe`/`unsafe`;
+`yes_no` reads a leading `yes`/`no`); `trust_remote_code` defaults to `false`. The model
+behavior is yours to validate — it is not asserted in CI.
+
+## Concurrency (opt-in, deterministic)
+
+By default the runner is sequential. For scale, `--concurrency N` (or a `concurrency: N`
+config field, 1–64) fans independent behaviors/scenarios out across a bounded thread
+pool. Results are always assembled in the same deterministic order regardless of
+completion order, the query budget stays a single fail-closed account (lock-guarded), and
+at `N=1` the path is byte-identical to today. Use it only for live runs where the latency
+is network-bound:
+
+```bash
+uv run redharness run configs/advbench_static.yaml --concurrency 8
 ```
 
 ## Tool calling (live targets)

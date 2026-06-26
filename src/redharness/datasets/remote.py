@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import ipaddress
 import socket
+import ssl
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
@@ -28,6 +29,23 @@ from redharness.errors import DatasetError
 
 _ALLOWED_SCHEMES = {"https", "file"}
 _MAX_BYTES = 64 * 1024 * 1024  # 64 MiB cap to avoid memory exhaustion.
+
+
+def _ssl_context() -> ssl.SSLContext:
+    """Build a default-verifying SSL context backed by ``certifi`` when available.
+
+    The python.org macOS build ships without a wired-up CA bundle, so the system
+    default context fails verification with ``CERTIFICATE_VERIFY_FAILED`` against
+    https sources. When ``certifi`` is importable (it ships with the
+    openai/anthropic/dashboard extras) its bundled CA file is used; otherwise the
+    plain default context is returned. ``certifi`` is never a hard core dependency —
+    it is used only if present.
+    """
+    try:
+        import certifi
+    except ImportError:
+        return ssl.create_default_context()
+    return ssl.create_default_context(cafile=certifi.where())
 
 
 def _is_blocked_address(ip: str) -> bool:
@@ -100,7 +118,10 @@ class RemoteDataset(Dataset):
                 raise DatasetError(f"url {self.url!r} has no host")
             _assert_public_host(host)
         # Scheme is allow-listed to https/file above, so urlopen is constrained.
-        with urlopen(self.url, timeout=self.timeout) as response:
+        # A certifi-backed SSL context is supplied for https so verification works
+        # out of the box on macOS python.org builds; file:// ignores it.
+        context = _ssl_context() if scheme == "https" else None
+        with urlopen(self.url, timeout=self.timeout, context=context) as response:
             data = response.read(_MAX_BYTES + 1)
         if len(data) > _MAX_BYTES:
             raise DatasetError(

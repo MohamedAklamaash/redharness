@@ -14,7 +14,10 @@ from __future__ import annotations
 
 import json
 import random
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from typing import TypeVar
 
 from redharness.config import RunConfig
 from redharness.core.attack import Attack
@@ -24,7 +27,12 @@ from redharness.core.models import Attempt, Behavior, Message
 from redharness.core.target import Target
 from redharness.errors import RedharnessError, RunBudgetExceeded
 from redharness.runner.agent_loop import run_agent_loop
-from redharness.runner.budget import BudgetedTarget, QueryBudget
+from redharness.runner.budget import (
+    BudgetedTarget,
+    QueryBudget,
+    UsageTally,
+    attempt_usage_scope,
+)
 from redharness.runner.build import (
     SPEC_ATTR,
     build_attack,
@@ -37,6 +45,9 @@ from redharness.runner.build import (
 )
 from redharness.runner.cache import AttemptCache, params_hash
 from redharness.runner.result import CellResult, RunResult
+
+_T = TypeVar("_T")
+_R = TypeVar("_R")
 
 
 def _plugin_params(plugin: object) -> dict:
@@ -162,28 +173,49 @@ class Runner:
         # Cache keys use the RAW target; the agent loop drives a budget-wrapped one
         # so every real model call is charged (cache hits never reach generate).
         budgeted = BudgetedTarget(target, self.budget)
-        all_attempts: list[Attempt] = []
-        for scenario in scenarios:
+
+        def compute(scenario) -> list[Attempt]:
             cached = self.cache.get(
                 target.name, target_hash, injection.name, injection_hash,
                 scenario.name, scenario.user_task,
             )
-            if cached is None:
-                before = self.budget.usage.snapshot()
+            if cached is not None:
+                return cached
+            with attempt_usage_scope() as usage:
                 payload = injection.build_injection(scenario)
                 attempt = run_agent_loop(
                     scenario, budgeted, payload, injection.name, self.config.max_steps
                 )
-                cached = [attempt]
-                _stamp_usage(self.budget, before, cached)
-                self.cache.put(
-                    target.name, target_hash, injection.name, injection_hash,
-                    scenario.name, scenario.user_task, cached,
-                )
+                attempts = [attempt]
+                _stamp_usage(usage, attempts)
+            self.cache.put(
+                target.name, target_hash, injection.name, injection_hash,
+                scenario.name, scenario.user_task, attempts,
+            )
+            return attempts
+
+        all_attempts: list[Attempt] = []
+        for cached in self._map(compute, scenarios):
             for attempt in cached:
                 transcripts.write(json.dumps(attempt.model_dump()) + "\n")
             all_attempts.extend(cached)
         return all_attempts
+
+    def _map(self, fn: Callable[[_T], _R], items: list[_T]) -> list[_R]:
+        """Apply ``fn`` over ``items``, preserving input order for determinism.
+
+        At ``concurrency == 1`` this is a plain in-order comprehension, byte-identical
+        to the sequential path (and it aborts on the first raised error before any
+        later item runs, so a fail-closed budget abort still stops the run cleanly).
+        At ``concurrency > 1`` the work fans out across a bounded thread pool but the
+        results are still gathered in submission order, so the assembled output never
+        depends on completion order; the first error surfaced fails the run closed.
+        """
+        if self.config.concurrency == 1:
+            return [fn(item) for item in items]
+        with ThreadPoolExecutor(max_workers=self.config.concurrency) as pool:
+            futures = [pool.submit(fn, item) for item in items]
+            return [future.result() for future in futures]
 
     def _run_attack(
         self,
@@ -210,16 +242,17 @@ class Runner:
         # every real provider call is charged at the call site (cache hits never
         # reach generate, so they are never charged).
         budgeted = BudgetedTarget(target, self.budget)
-        all_attempts: list[Attempt] = []
-        for behavior in behaviors:
+
+        def compute(behavior: Behavior) -> list[Attempt]:
             cached = self.cache.get(
                 target.name, target_hash, attack.name, attack_hash,
                 behavior.id, behavior.prompt,
             )
-            if cached is None:
-                before = self.budget.usage.snapshot()
+            if cached is not None:
+                return cached
+            with attempt_usage_scope() as usage:
                 try:
-                    cached = attack.run(behavior, budgeted)
+                    attempts = attack.run(behavior, budgeted)
                 except RunBudgetExceeded:
                     # Fail-closed: a budget abort must propagate, never be swallowed
                     # into an errored attempt that lets the run continue overspending.
@@ -227,15 +260,18 @@ class Runner:
                 except RedharnessError as exc:
                     # Expected typed failure (e.g. a transient TargetRuntimeError):
                     # record an errored attempt and continue the rest of the matrix.
-                    cached = [_errored_attempt(behavior, attack.name, target.name, exc)]
+                    return [_errored_attempt(behavior, attack.name, target.name, exc)]
                 except Exception as exc:  # defensive catch-all, sanitized + truncated
-                    cached = [_errored_attempt(behavior, attack.name, target.name, exc)]
-                else:
-                    _stamp_usage(self.budget, before, cached)
-                    self.cache.put(
-                        target.name, target_hash, attack.name, attack_hash,
-                        behavior.id, behavior.prompt, cached,
-                    )
+                    return [_errored_attempt(behavior, attack.name, target.name, exc)]
+                _stamp_usage(usage, attempts)
+            self.cache.put(
+                target.name, target_hash, attack.name, attack_hash,
+                behavior.id, behavior.prompt, attempts,
+            )
+            return attempts
+
+        all_attempts: list[Attempt] = []
+        for cached in self._map(compute, behaviors):
             for attempt in cached:
                 transcripts.write(json.dumps(attempt.model_dump()) + "\n")
             all_attempts.extend(cached)
@@ -328,25 +364,24 @@ def _errored_attempt(
     )
 
 
-def _stamp_usage(budget: QueryBudget, before: tuple[int, int, int], attempts) -> None:
-    """Stamp the per-behavior token-usage delta into each freshly produced attempt.
+def _stamp_usage(usage: UsageTally, attempts) -> None:
+    """Stamp the per-behavior token-usage total into each freshly produced attempt.
 
-    The delta is read from the run-wide :class:`UsageTally` snapshotted before the
-    behavior ran, so it folds in every provider the attack touched (target, and for
-    PAIR/TAP/Crescendo the attacker + in-loop judge). It is written only on a cache
-    *miss* (so a cache hit never re-charges) and only when at least one usage-bearing
-    call occurred (offline/reference runs leave the attempts unstamped → the
-    token_usage/cost metrics report N/A). Multiple attempts for one behavior carry
-    the same per-behavior total; the metrics group by behavior so it is counted once.
+    ``usage`` is the thread-isolated per-compute :class:`UsageTally` bound by
+    :func:`~redharness.runner.budget.attempt_usage_scope`, so it holds exactly the
+    calls this behavior's attempts made — every provider the attack touched (target,
+    and for PAIR/TAP/Crescendo the attacker + in-loop judge) and nothing from a
+    concurrently running sibling behavior. It is written only on a cache *miss* (so a
+    cache hit never re-charges) and only when at least one usage-bearing call occurred
+    (offline/reference runs leave the attempts unstamped → the token_usage/cost metrics
+    report N/A). Multiple attempts for one behavior carry the same per-behavior total;
+    the metrics group by behavior so it is counted once.
     """
-    di = budget.usage.input_tokens - before[0]
-    do = budget.usage.output_tokens - before[1]
-    dc = budget.usage.calls - before[2]
-    if dc <= 0:
+    if usage.calls <= 0:
         return
-    usage = {"input_tokens": di, "output_tokens": do}
+    stamped = {"input_tokens": usage.input_tokens, "output_tokens": usage.output_tokens}
     for attempt in attempts:
-        attempt.metadata["usage"] = dict(usage)
+        attempt.metadata["usage"] = dict(stamped)
 
 
 def _wrap_grader(judge: Judge, budget: QueryBudget) -> None:
