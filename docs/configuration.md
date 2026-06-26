@@ -198,16 +198,44 @@ over-refusal sets map benign prompts to `should_comply` so the false-refusal-rat
 | `xstest` | paul-rottger/xstest | `should_comply` (safe split) / `should_refuse` (contrast) | exaggerated safety (FRR) |
 | `or_bench` | OR-Bench | `should_comply` | over-refusal (FRR) |
 
+See `CONTRIBUTING.md` for the per-dataset source-URL / license / fetch-not-redistribute
+table.
+
+### Pinning a dataset (verified URL + hash)
+
+The shipped `DEFAULT_URL` carries a `REPLACE_WITH_VERIFIED_COMMIT_SHA` placeholder and the
+default `sha256` is `"0" * 64` — both inert, so a misconfigured run fails closed. To use a
+set, pin a real **commit-SHA URL** and its **sha256** and pass them as params. This helper
+resolves the latest commit for a file and prints the two lines to paste:
+
+```bash
+pin() {  # pin <owner/repo> <path-in-repo>
+  sha=$(curl -s "https://api.github.com/repos/$1/commits?path=$2&per_page=1" \
+        | python3 -c "import sys,json;print(json.load(sys.stdin)[0]['sha'])")
+  url="https://raw.githubusercontent.com/$1/$sha/$2"
+  hash=$(curl -sL "$url" | shasum -a 256 | cut -d' ' -f1)   # Linux: sha256sum
+  printf '      url: "%s"\n      sha256: "%s"\n' "$url" "$hash"
+}
+pin llm-attacks/llm-attacks data/advbench/harmful_behaviors.csv
+pin paul-rottger/xstest      xstest_prompts.csv
+```
+
+Verified pins for the two permissively-licensed sets (AdvBench, MIT; XSTest, CC-BY-4.0):
+
 ```yaml
 datasets:
   - name: advbench
-    params: {allow_download: true, limit: 50, sha256: "<verified sha256>"}
+    params:
+      url: "https://raw.githubusercontent.com/llm-attacks/llm-attacks/a62d1307e38b3a076e614b20781c785fd860d813/data/advbench/harmful_behaviors.csv"
+      sha256: "6cd1a5c63c07610d7eb67307772ee5606017ee950b5770ab288a2c487489d3e1"
+      allow_download: true
+      limit: 50                       # cap the behavior count for cost; AdvBench has 520
   - name: xstest
-    params: {allow_download: true, sha256: "<verified sha256>"}
+    params:
+      url: "https://raw.githubusercontent.com/paul-rottger/xstest/475f10bf0a3d6a9dfb174b6de1a38afbfdff98a5/xstest_prompts.csv"
+      sha256: "11783fb294ed017473ee53c207d71f2161c7672c8d0b037501e78387f801cb5a"
+      allow_download: true
 ```
-
-See `CONTRIBUTING.md` for the per-dataset source-URL / license / fetch-not-redistribute
-table.
 
 ## Cost & token-usage metrics
 
@@ -255,6 +283,76 @@ targets:
 Most local servers ignore the key, but the adapter still reads a (possibly dummy)
 value from `api_key_env`. A complete template is in
 [`configs/local_servers.example.yaml`](../configs/local_servers.example.yaml).
+
+## Your first real evaluation (end-to-end)
+
+The repo ships three runnable example configs (real, commit-pinned AdvBench/XSTest sources;
+target `claude-haiku-4-5`, attacker/grader `gpt-4o-mini`) so a fresh clone can produce a real
+number in minutes:
+
+```bash
+uv pip install -e '.[openai,anthropic]'
+export OPENAI_API_KEY=sk-...
+export ANTHROPIC_API_KEY=sk-ant-...
+export SSL_CERT_FILE="$(uv run python -m certifi)"   # macOS python.org builds — see Troubleshooting
+
+uv run redharness run configs/advbench_static.yaml   # baseline refusal robustness (~50 calls)
+uv run redharness run configs/advbench_pair.yaml     # PAIR jailbreak (multi-call)
+uv run redharness run configs/xstest_frr.yaml        # over-refusal / FRR
+uv run redharness dashboard --label real-eval-v1     # all runs side by side (needs .[dashboard])
+```
+
+Each config caps spend two ways — a fail-closed run-level `max_queries`, and a dataset
+`limit` (50 / 20 / 50 behaviors) — so a first pass costs cents on haiku/mini. Raise `limit`
+(AdvBench has 520, XSTest 450) once the numbers look right.
+
+What a healthy run looks like (a well-aligned model): AdvBench-static `asr` near `0` with
+`refusal_rate` near `1.0`; AdvBench-PAIR `asr` clearly **above** the static baseline (the
+attack working through the harness); XSTest `frr` low. Any gap between `refusal_match` and
+`strongreject_score` in the PAIR run is the judge-sensitivity signal.
+
+## Troubleshooting
+
+### `CERTIFICATE_VERIFY_FAILED` when a loader fetches a dataset (macOS)
+
+The dataset loaders fetch over HTTPS with Python's standard-library `urllib`. The python.org
+macOS build ships without a wired-up CA bundle, so certificate verification fails (system
+`curl` works because it uses macOS's own trust store, not Python's). The live API adapters use
+`httpx`, which bundles its own certificates, so your provider calls are unaffected — only the
+dataset download breaks. Point Python's SSL at the `certifi` bundle already in your venv (it
+ships with the `openai`/`anthropic` extras):
+
+```bash
+export SSL_CERT_FILE="$(uv run python -m certifi)"
+```
+
+Or run the one-time installer that wires it in permanently:
+
+```bash
+/Applications/Python\ 3.12/Install\ Certificates.command
+```
+
+### `TargetConfigError: ... requires the '<name>' extra` or a missing key
+
+Install the provider extra and export the key named by `api_key_env`:
+
+```bash
+uv pip install -e '.[openai,anthropic]'
+export OPENAI_API_KEY=...        # or whatever api_key_env points to
+```
+
+Credentials are read only from the environment, never from YAML.
+
+### `RunBudgetExceeded`
+
+The run hit its fail-closed `max_queries` ceiling — working as intended. Raise it
+deliberately, or lower the dataset `limit` / the attack's per-behavior `max_queries`.
+
+### `DatasetError: ... sha256 mismatch` or a `REPLACE_WITH_VERIFIED_COMMIT_SHA` URL
+
+You ran a benchmark loader without pinning it. Supply a verified `url` + `sha256` (see
+[Pinning a dataset](#pinning-a-dataset-verified-url--hash)); the shipped defaults are inert
+placeholders that fail closed by design.
 
 ## Outputs
 

@@ -1,0 +1,30 @@
+run_name: advbench_pair_haiku
+seed: 0
+max_queries: 1200
+targets:
+  - name: anthropic
+    params: { model: claude-haiku-4-5 }
+attacks:
+  - name: pair
+    params:
+      max_queries: 30
+      attacker:
+        name: openai_compat
+        params: { model: gpt-4o-mini, base_url: https://api.openai.com/v1, api_key_env: OPENAI_API_KEY }
+      judge:
+        name: refusal_match
+datasets:
+  - name: advbench
+    params:
+      url: "https://raw.githubusercontent.com/llm-attacks/llm-attacks/a62d1307e38b3a076e614b20781c785fd860d813/data/advbench/harmful_behaviors.csv"
+      sha256: "6cd1a5c63c07610d7eb67307772ee5606017ee950b5770ab288a2c487489d3e1"
+      allow_download: true
+      limit: 20
+judges:
+  - refusal_match
+  - name: strongreject
+    params:
+      grader:
+        name: openai_compat
+        params: { model: gpt-4o-mini, base_url: https://api.openai.com/v1, api_key_env: OPENAI_API_KEY }
+metrics: [asr, asr_at_k, refusal_rate, strongreject_score, token_usage, cost]

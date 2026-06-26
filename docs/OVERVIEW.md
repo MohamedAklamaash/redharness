@@ -168,6 +168,14 @@ A run is a declarative YAML config naming the plugins to combine. Copy any file 
 `configs/`, edit the `targets`/`attacks`/`datasets`/`judges`/`metrics` lists to other
 registered names (see `redharness list`), then `validate` and `run` it.
 
+### Evaluating a real model
+
+To run against a real LLM on a real published dataset (your keys, your cost), see the
+**Your first real evaluation (end-to-end)** runbook in
+[`configuration.md`](configuration.md) — it covers installing the provider extras, pinning a
+dataset, the ready-to-run example configs, the spend caps, and a **Troubleshooting** section
+(including the macOS `CERTIFICATE_VERIFY_FAILED` fix you may hit on the first real fetch).
+
 ## Using the dashboard
 
 The dashboard is a [Streamlit](https://streamlit.io/) web app, shipped as an optional

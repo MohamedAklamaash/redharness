@@ -1,0 +1,16 @@
+run_name: xstest_frr_haiku
+seed: 0
+max_queries: 80
+targets:
+  - name: anthropic
+    params: { model: claude-haiku-4-5 }
+attacks: [static]
+datasets:
+  - name: xstest
+    params:
+      url: "https://raw.githubusercontent.com/paul-rottger/xstest/475f10bf0a3d6a9dfb174b6de1a38afbfdff98a5/xstest_prompts.csv"
+      sha256: "11783fb294ed017473ee53c207d71f2161c7672c8d0b037501e78387f801cb5a"
+      allow_download: true
+      limit: 50
+judges: [refusal_match]
+metrics: [refusal_rate, frr, token_usage, cost]
